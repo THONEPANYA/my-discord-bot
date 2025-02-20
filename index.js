@@ -187,6 +187,30 @@ client.on("messageCreate", async (message) => {
     }
 });
 
+// ✅ ฟังก์ชันสร้างห้อง Server Stats
+async function setupServerStats(guild) {
+    if (!guild) return;
+
+    // เช็คว่ามี Category อยู่แล้วหรือไม่
+    let statsCategory = guild.channels.cache.find(ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory);
+
+    if (!statsCategory) {
+        statsCategory = await guild.channels.create({
+            name: "📊 Server Stats",
+            type: ChannelType.GuildCategory,
+            permissionOverwrites: [{ id: guild.id, allow: [PermissionsBitField.Flags.ViewChannel] }]
+        });
+    }
+
+    // สร้างห้องแสดงข้อมูล
+    await guild.channels.create({ name: `👥 สมาชิก: ${guild.memberCount}`, type: ChannelType.GuildVoice, parent: statsCategory.id, permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }] });
+    await guild.channels.create({ name: `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`, type: ChannelType.GuildVoice, parent: statsCategory.id, permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }] });
+    await guild.channels.create({ name: `🔊 เสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`, type: ChannelType.GuildVoice, parent: statsCategory.id, permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }] });
+    await guild.channels.create({ name: `🎭 บทบาท: ${guild.roles.cache.size}`, type: ChannelType.GuildVoice, parent: statsCategory.id, permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }] });
+
+    console.log(`✅ สร้างห้อง Server Stats สำเร็จในเซิร์ฟเวอร์: ${guild.name}`);
+}
+
 // ✅ ฟังก์ชันอัปเดตข้อมูล Server Stats แบบเรียลไทม์
 async function updateServerStats(guild) {
     if (!guild) return;
@@ -239,6 +263,7 @@ client.on("messageCreate", async (message) => {
         message.reply("✅ สร้างห้อง Server Stats เรียบร้อย!");
     }
 });
+
 
 // ✅ ล็อกอินบอท
 client.login(process.env.TOKEN);
