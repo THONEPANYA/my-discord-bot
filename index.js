@@ -187,5 +187,71 @@ client.on("messageCreate", async (message) => {
     }
 });
 
+// ✅ ฟังก์ชันอัปเดตข้อมูลเซิร์ฟเวอร์
+async function updateServerStats(guild) {
+    if (!guild) return;
+    
+    // หา Channel ที่มีอยู่แล้ว
+    let memberCountChannel = guild.channels.cache.find(ch => ch.name.startsWith("👥 สมาชิก:"));
+    let textChannelCount = guild.channels.cache.find(ch => ch.name.startsWith("💬 ข้อความ:"));
+    let voiceChannelCount = guild.channels.cache.find(ch => ch.name.startsWith("🔊 เสียง:"));
+    let roleCount = guild.channels.cache.find(ch => ch.name.startsWith("🎭 บทบาท:"));
+
+    // ถ้ายังไม่มี Channel, ให้สร้างขึ้นมาใหม่
+    if (!memberCountChannel) {
+        memberCountChannel = await guild.channels.create({
+            name: `👥 สมาชิก: ${guild.memberCount}`,
+            type: ChannelType.GuildVoice,
+            permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }]
+        });
+    }
+
+    if (!textChannelCount) {
+        textChannelCount = await guild.channels.create({
+            name: `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`,
+            type: ChannelType.GuildVoice,
+            permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }]
+        });
+    }
+
+    if (!voiceChannelCount) {
+        voiceChannelCount = await guild.channels.create({
+            name: `🔊 เสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`,
+            type: ChannelType.GuildVoice,
+            permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }]
+        });
+    }
+
+    if (!roleCount) {
+        roleCount = await guild.channels.create({
+            name: `🎭 บทบาท: ${guild.roles.cache.size}`,
+            type: ChannelType.GuildVoice,
+            permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }]
+        });
+    }
+
+    // อัปเดตข้อมูลให้ช่องที่มีอยู่
+    try {
+        await memberCountChannel.setName(`👥 สมาชิก: ${guild.memberCount}`);
+        await textChannelCount.setName(`💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`);
+        await voiceChannelCount.setName(`🔊 เสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`);
+        await roleCount.setName(`🎭 บทบาท: ${guild.roles.cache.size}`);
+        console.log(`🔄 อัปเดต Server Stats ของ ${guild.name}`);
+    } catch (error) {
+        console.error("❌ ไม่สามารถอัปเดตช่องสถิติได้:", error);
+    }
+}
+
+// 📢 เมื่อมีสมาชิกเข้า
+client.on("guildMemberAdd", async (member) => {
+    await updateServerStats(member.guild);
+});
+
+// ❌ เมื่อมีสมาชิกออก
+client.on("guildMemberRemove", async (member) => {
+    await updateServerStats(member.guild);
+});
+
+
 // ✅ ล็อกอินบอท
 client.login(process.env.TOKEN);
