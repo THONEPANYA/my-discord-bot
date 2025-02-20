@@ -4,9 +4,6 @@ import path from 'path';
 import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
 
 // ✅ เชื่อมต่อฐานข้อมูล
-import mongoose from 'mongoose';
-
-// เชื่อมต่อ MongoDB
 
 import mongoose from 'mongoose';
 
