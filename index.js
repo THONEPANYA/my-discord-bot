@@ -142,12 +142,9 @@ client.on("guildMemberRemove", async (member) => {
     await updateMemberCount(member.guild);
 });
 
-// ระบบหลังบ้าน (Web Dashboard)
-import express from 'express';
-import path from 'path';
-
+// ✅ ระบบ Web Dashboard
 const app = express();
-const PORT = process.env.PORT || 8080; // ✅ ตรวจสอบให้แน่ใจว่ามีการประกาศตัวแปร PORT
+const PORT = process.env.PORT || 3000; // ✅ แก้ไขตัวแปรให้แน่ใจว่ากำหนดค่าไว้
 
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
@@ -161,30 +158,29 @@ app.listen(PORT, () => {
     console.log(`🌐 Web Dashboard เปิดใช้งานที่ http://localhost:${PORT}`);
 });
 
-// ระบบเศรษฐกิจ (Economy System)
-// const db = new sqlite3.Database('./database.sqlite');
-
+// ✅ คำสั่ง !help
 client.on("messageCreate", async (message) => {
-    if (message.author.bot) return;
+    if (message.content === "!help") {
+        const helpMessage = `
+        **📌 คำสั่งทั้งหมดของบอท**
+        🔹 **!setup** - ตั้งค่าระบบรับยศ (เฉพาะ Admin)
+        🔹 **!members** - สร้างห้องแสดงจำนวนสมาชิก (เฉพาะ Admin)
+        
+        **✅ ระบบยืนยันตัวตน & รับยศ**
+        - เข้าไปที่ห้อง **"🔰 รับยศที่นี่"** 
+        - กดปุ่ม **🔍 ยืนยันตัวตน** แล้วกด **✅ รับยศ** เพื่อรับยศ "สมาชิก"
 
-    const args = message.content.split(" ");
-    const command = args.shift().toLowerCase();
+        **👥 ระบบอัปเดตจำนวนสมาชิก**
+        - คำสั่ง **!members** สร้างห้องแสดงจำนวนสมาชิก
+        - เมื่อมีคนเข้า/ออกเซิร์ฟเวอร์ ห้องจะอัปเดตอัตโนมัติ
 
-    if (command === "!balance") {
-        const balance = 1000; // ดึงจากฐานข้อมูล
-        message.reply(`💰 คุณมีเงิน: ${balance} 💵`);
-    }
-
-    if (command === "!daily") {
-        message.reply("🎁 คุณได้รับเงินรายวัน 100 💵!");
-    }
-
-    if (command === "!work") {
-        const amount = Math.floor(Math.random() * 500) + 100;
-        message.reply(`💼 คุณทำงานและได้รับ ${amount} 💵!`);
+        **🚨 ระบบแจ้งเตือน**
+        - หากบอทล่ม จะแจ้งเตือนในห้อง **"📜 log-บอท"**
+        - เมื่อมีคนได้รับยศ จะแจ้งเตือนในห้อง **"📜 log-รับยศ"**
+        `;
+        message.channel.send(helpMessage);
     }
 });
 
-// คำสั่ง !help
-
+// ✅ ล็อกอินบอท
 client.login(process.env.TOKEN);
