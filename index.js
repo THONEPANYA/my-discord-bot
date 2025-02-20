@@ -222,7 +222,7 @@ client.on('messageCreate', async (message) => {
 
 // ระบบหลังบ้าน (Backend) ของเว็บเซิร์ฟเวอร์
 import express from 'express';
-import { path } from "path";
+import path from 'path';
 
 const app = express();
 const port = process.env.PORT || 3000;
