@@ -220,6 +220,65 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+// ระบบหลังบ้าน (Backend) ของเว็บเซิร์ฟเวอร์
+import express from 'express';
+import { path } from "path";
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// ตั้งค่าให้ Express ใช้ EJS เป็น Template Engine
+app.set("view engine", "ejs");
+app.set("views", path.join(process.cwd(), "views"));
+
+app.use(express.static("public"));
+
+// สร้าง Route สำหรับหน้า Dashboard
+app.get("/", (req, res) => {
+    res.render("dashboard", { bot: client });
+});
+
+// ให้เว็บเซิร์ฟเวอร์เริ่มทำงาน
+app.listen(PORT, () => {
+    console.log(`🌐 Web Dashboard เปิดใช้งานที่ http://localhost:${PORT}`);
+});
+
+// ระบบเศรษฐกิจ (Economy System)
+import { getUserBalance, addUserBalance, setUserBalance } from "./database.js";
+
+client.on("messageCreate", async (message) => {
+    if (message.author.bot) return;
+
+    const args = message.content.split(" ");
+    const command = args.shift().toLowerCase();
+
+    if (command === "!balance") {
+        const balance = getUserBalance(message.author.id);
+        message.reply(`💰 คุณมีเงิน: ${balance} 💵`);
+    }
+
+    if (command === "!daily") {
+        addUserBalance(message.author.id, 100);
+        message.reply("🎁 คุณได้รับเงินรายวัน 100 💵!");
+    }
+
+    if (command === "!work") {
+        const amount = Math.floor(Math.random() * 500) + 100;
+        addUserBalance(message.author.id, amount);
+        message.reply(`💼 คุณทำงานและได้รับ ${amount} 💵!`);
+    }
+
+    if (command === "!leaderboard") {
+        const rows = db.prepare("SELECT id, balance FROM users ORDER BY balance DESC LIMIT 5").all();
+        let leaderboard = "🏆 **อันดับเศรษฐีของเซิร์ฟเวอร์** 🏆\n";
+        rows.forEach((row, index) => {
+            leaderboard += `${index + 1}. <@${row.id}> - 💵 ${row.balance}\n`;
+        });
+        message.channel.send(leaderboard);
+    }
+});
+
+
 
 client.login(process.env.TOKEN);
  
