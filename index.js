@@ -143,20 +143,22 @@ client.on("guildMemberRemove", async (member) => {
 });
 
 // ระบบหลังบ้าน (Web Dashboard)
+import express from 'express';
+import path from 'path';
+
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8080; // ✅ ตรวจสอบให้แน่ใจว่ามีการประกาศตัวแปร PORT
 
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
-
 app.use(express.static("public"));
 
-app.get("/", (req, res) => { // eslint-disable-line no-unused-vars
-    res.render("dashboard", { bot: client });
+app.get("/", (req, res) => {
+    res.send("✅ Web Dashboard พร้อมใช้งาน!");
 });
 
-app.listen(port, () => {
-    console.log(`🌐 Web Dashboard เปิดใช้งานที่ http://localhost:${port}`);
+app.listen(PORT, () => {
+    console.log(`🌐 Web Dashboard เปิดใช้งานที่ http://localhost:${PORT}`);
 });
 
 // ระบบเศรษฐกิจ (Economy System)
