@@ -144,18 +144,23 @@ client.on("guildMemberRemove", async (member) => {
 
 // ✅ ระบบ Web Dashboard
 const app = express();
-const PORT = process.env.PORT || 8080; // ✅ แก้ไขตัวแปรให้แน่ใจว่ากำหนดค่าไว้
+const PORT = process.env.PORT || 8080;
 
+// ตั้งค่าให้ Express ใช้ EJS
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
+
+// ตั้งค่าให้ Express โหลดไฟล์ Static
 app.use(express.static("public"));
 
+// Route หลัก (หน้า Dashboard)
 app.get("/", (req, res) => {
-    res.send("✅ Web Dashboard พร้อมใช้งาน!");
+    res.render("dashboard", { botStatus: "✅ บอทกำลังทำงาน!" });
 });
 
+// เริ่มต้นเซิร์ฟเวอร์
 app.listen(PORT, () => {
-    console.log(`🌐 Web Dashboard เปิดใช้งานที่ http://localhost:${PORT}`);
+    console.log(`🌐 Web Dashboard เปิดใช้งานที่ https://my-discord-bot-osbe.onrender.com`);
 });
 
 // ✅ คำสั่ง !help
