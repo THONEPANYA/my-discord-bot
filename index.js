@@ -7,6 +7,14 @@ import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, Butto
 import mongoose from 'mongoose';
 
 // เชื่อมต่อ MongoDB
+
+import mongoose from 'mongoose';
+
+if (!process.env.MONGO_URI) {
+    console.error("❌ ไม่พบ MONGO_URI ใน Environment Variables!");
+    process.exit(1);
+}
+
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -15,6 +23,7 @@ mongoose.connect(process.env.MONGO_URI, {
 }).catch(err => {
     console.error("❌ ไม่สามารถเชื่อมต่อ MongoDB:", err);
 });
+
 
 // ตรวจสอบว่า Token โหลดถูกต้องหรือไม่
 if (!process.env.TOKEN) {
