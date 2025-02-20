@@ -244,7 +244,10 @@ app.listen(PORT, () => {
 });
 
 // ระบบเศรษฐกิจ (Economy System)
+import sqlite3 from 'sqlite3';
 import { getUserBalance, addUserBalance, setUserBalance } from "./database.js";
+
+const db = new sqlite3.Database('./database.sqlite');
 
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
