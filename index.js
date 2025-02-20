@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
-import sqlite3 from 'sqlite3';
 
 // ตรวจสอบว่า Token โหลดถูกต้องหรือไม่
 if (!process.env.TOKEN) {
@@ -185,31 +184,5 @@ client.on("messageCreate", async (message) => {
 });
 
 // คำสั่ง !help
-client.on('messageCreate', async (message) => {
-    if (!message.guild || message.author.bot) return;
-
-    if (message.content === "!help") {
-        const helpMessage = `
-        **📌 คำสั่งทั้งหมดของบอท**
-        🔹 **!setup** - ตั้งค่าระบบรับยศ (เฉพาะ Admin)
-        🔹 **!members** - สร้างห้องแสดงจำนวนสมาชิก (เฉพาะ Admin)
-        🔹 **!balance** - ดูจำนวนเงินของคุณ
-        🔹 **!daily** - รับเงินรายวัน 100 💵
-        🔹 **!work** - ทำงานและรับเงินแบบสุ่ม
-
-        **👥 ระบบอัปเดตจำนวนสมาชิก**
-        - เมื่อมีคนเข้า/ออกเซิร์ฟเวอร์ ห้องจะอัปเดตอัตโนมัติ
-
-        **🚨 ระบบแจ้งเตือน**
-        - แจ้งเตือนเมื่อบอทล่ม
-        - แจ้งเตือนเมื่อมีสมาชิกใหม่
-
-        **💡 ระบบเพิ่มเติม**
-        - Web Dashboard เปิดใช้งานที่ http://localhost:${port}
-        `;
-
-        message.channel.send(helpMessage);
-    }
-});
 
 client.login(process.env.TOKEN);
