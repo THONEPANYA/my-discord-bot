@@ -144,7 +144,7 @@ client.on("guildMemberRemove", async (member) => {
 
 // ระบบหลังบ้าน (Web Dashboard)
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
