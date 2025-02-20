@@ -1,6 +1,12 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
 
+// ตรวจสอบว่า Token โหลดถูกต้องหรือไม่
+if (!process.env.TOKEN) {
+    console.error("❌ ไม่พบ TOKEN ในไฟล์ .env");
+    process.exit(1);
+}
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
