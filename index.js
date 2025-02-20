@@ -1,16 +1,19 @@
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
-import sqlite3 from 'sqlite3';
 import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
 
-// ✅ เชื่อมต่อฐานข้อมูล SQLite3
-const db = new sqlite3.Database('./database.sqlite', (err) => {
-    if (err) {
-        console.error("❌ ไม่สามารถเชื่อมต่อฐานข้อมูล:", err.message);
-    } else {
-        console.log("✅ เชื่อมต่อฐานข้อมูลสำเร็จ!");
-    }
+// ✅ เชื่อมต่อฐานข้อมูล
+import mongoose from 'mongoose';
+
+// เชื่อมต่อ MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log("✅ เชื่อมต่อ MongoDB สำเร็จ!");
+}).catch(err => {
+    console.error("❌ ไม่สามารถเชื่อมต่อ MongoDB:", err);
 });
 
 // ตรวจสอบว่า Token โหลดถูกต้องหรือไม่
