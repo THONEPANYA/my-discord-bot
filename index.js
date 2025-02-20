@@ -169,7 +169,7 @@ client.on("messageCreate", async (message) => {
         const helpMessage = `
         **📌 คำสั่งทั้งหมดของบอท**
         🔹 **!setup** - ตั้งค่าระบบรับยศ (เฉพาะ Admin)
-        🔹 **!members** - สร้างห้องแสดงจำนวนสมาชิก (เฉพาะ Admin)
+        🔹 **!setupstats** - สร้างห้องแสดงจำนวนสมาชิก (เฉพาะ Admin)
         
         **✅ ระบบยืนยันตัวตน & รับยศ**
         - เข้าไปที่ห้อง **"🔰 ยืนยันตัวตน"** 
@@ -264,6 +264,98 @@ client.on("messageCreate", async (message) => {
     }
 });
 
+
+// ✅ ระบบป้องกัน Raid & Spam (Anti-Raid & Anti-Spam)
+let antiSpamEnabled = true; // เปิดเป็น true หรือปิดเป็น false
+let antiRaidEnabled = true; // เปิดเป็น true หรือปิดเป็น false
+let spamLitmit = 5; // จำนวนข้อความที่ส่งต่อกัน 5 ครั้ง
+
+const userMessageMap = new Map(); // เก็บข้อมูลจำนวนข้อความที่แต่ละคนส่ง
+
+// ✅ ระบบป้องกัน Spam
+client.on("messageCreate", async (message) => {
+    if (!antiSpamEnabled || message.author.bot || !message.guild) return;
+
+    const now = Date.now();
+    const userId = message.author.id;
+
+    if (!userMessages.has(userId)) {
+        userMessages.set(userId, []);
+    }
+
+    const timestamps = userMessages.get(userId);
+    timestamps.push(now);
+
+    // ลบข้อมูลเก่าที่เกิน 5 วินาที
+    while (timestamps.length > 0 && timestamps[0] < now - 5000) {
+        timestamps.shift();
+    }
+
+    if (timestamps.length > spamLimit) {
+        await message.delete();
+        message.channel.send(`🚨 <@${userId}> หยุดสแปมข้อความ!`);
+    }
+});
+
+// ✅ ระบบป้องกัน Raid (ป้องกันการเข้าร่วมเยอะเกินไป)
+const joinTimestamps = [];
+const joinLimit = 5; // จำนวนคนที่เข้ามาในเวลา 10 วินาที
+
+client.on("guildMemberAdd", async (member) => {
+    if (!antiRaidEnabled) return;
+
+    const now = Date.now();
+    joinTimestamps.push(now);
+
+    // ลบข้อมูลเก่าที่เกิน 10 วินาที
+    while (joinTimestamps.length > 0 && joinTimestamps[0] < now - 10000) {
+        joinTimestamps.shift();
+    }
+
+    if (joinTimestamps.length > joinLimit) {
+        await member.kick("🚨 ระบบป้องกัน Raid ตรวจพบการเข้าร่วมผิดปกติ!");
+        const logChannel = member.guild.channels.cache.find(ch => ch.name === "📜 log-บอท");
+        if (logChannel) {
+            logChannel.send(`🚨 ระบบป้องกัน Raid: เตะ ${member.user.tag} ออกจากเซิร์ฟเวอร์!`);
+        }
+    }
+});
+
+// ✅ คำสั่งเปิด/ปิดระบบป้องกัน
+client.on("messageCreate", async (message) => {
+    if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
+
+    const args = message.content.split(" ");
+    const command = args.shift().toLowerCase();
+
+    if (command === "!antispam") {
+        if (args[0] === "on") {
+            antiSpamEnabled = true;
+            message.reply("✅ เปิดระบบป้องกันสแปมแล้ว!");
+        } else if (args[0] === "off") {
+            antiSpamEnabled = false;
+            message.reply("❌ ปิดระบบป้องกันสแปมแล้ว!");
+        } else if (args[0] === "setlimit") {
+            const newLimit = parseInt(args[1]);
+            if (!isNaN(newLimit) && newLimit > 0) {
+                spamLimit = newLimit;
+                message.reply(`🔧 ตั้งค่าขีดจำกัดข้อความเป็น ${newLimit} ข้อความ/5 วินาที`);
+            } else {
+                message.reply("⚠️ โปรดใส่ค่าที่ถูกต้อง!");
+            }
+        }
+    }
+
+    if (command === "!antiraid") {
+        if (args[0] === "on") {
+            antiRaidEnabled = true;
+            message.reply("✅ เปิดระบบป้องกัน Raid แล้ว!");
+        } else if (args[0] === "off") {
+            antiRaidEnabled = false;
+            message.reply("❌ ปิดระบบป้องกัน Raid แล้ว!");
+        }
+    }
+});
 
 // ✅ ล็อกอินบอท
 client.login(process.env.TOKEN);
