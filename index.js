@@ -152,7 +152,7 @@ app.set("views", path.join(process.cwd(), "views"));
 
 app.use(express.static("public"));
 
-app.get("/", (req, res) => {
+app.get("/", (req, res) => { // eslint-disable-line no-unused-vars
     res.render("dashboard", { bot: client });
 });
 
@@ -161,7 +161,7 @@ app.listen(port, () => {
 });
 
 // ระบบเศรษฐกิจ (Economy System)
-const db = new sqlite3.Database('./database.sqlite');
+// const db = new sqlite3.Database('./database.sqlite');
 
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
