@@ -33,6 +33,7 @@ process.on("uncaughtException", async (error) => {
 });
 
 const verifiedUsers = new Set();
+let memberCountChannelId = null; // เก็บ ID ของช่องแสดงจำนวนสมาชิก
 
 client.on('messageCreate', async (message) => {
     if (!message.guild || message.author.bot) return;
@@ -86,6 +87,7 @@ client.on('messageCreate', async (message) => {
         message.reply("✅ ตั้งค่าห้องรับยศและล็อกแจ้งเตือนเรียบร้อย!");
     }
     
+    // 🔹 ระบบอัปเดตจำนวนสมาชิกแบบเรียลไทม์
     if (message.content === "!members") {
         if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
             return message.reply("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้!");
@@ -94,22 +96,48 @@ client.on('messageCreate', async (message) => {
         let existingChannel = message.guild.channels.cache.find(ch => ch.name.startsWith("👥 สมาชิกทั้งหมด:"));
         
         if (existingChannel) {
+            memberCountChannelId = existingChannel.id; // บันทึก ID ของช่องที่มีอยู่
             return message.reply("⚠️ มีช่องสมาชิกอยู่แล้ว!");
         }
 
+        // สร้างช่อง Voice Channel สำหรับแสดงจำนวนสมาชิก
         const memberChannel = await message.guild.channels.create({
             name: `👥 สมาชิกทั้งหมด: ${message.guild.memberCount}`,
             type: ChannelType.GuildVoice,
             permissionOverwrites: [
                 {
                     id: message.guild.id,
-                    deny: [PermissionsBitField.Flags.Connect]
+                    deny: [PermissionsBitField.Flags.Connect] // ป้องกันคนเข้า
                 }
             ]
         });
 
+        memberCountChannelId = memberChannel.id; // บันทึก ID ช่องใหม่
         message.reply(`✅ สร้างช่อง **${memberChannel.name}** แล้ว!`);
     }
+});
+
+// ฟังก์ชันอัปเดตจำนวนสมาชิกแบบเรียลไทม์
+async function updateMemberCount(guild) {
+    let memberChannel = guild.channels.cache.find(ch => ch.name.startsWith("👥 สมาชิกทั้งหมด:"));
+    if (!memberChannel) return;
+
+    try {
+        await memberChannel.setName(`👥 สมาชิกทั้งหมด: ${guild.memberCount}`);
+        console.log(`🔄 อัปเดตจำนวนสมาชิกเป็น: ${guild.memberCount}`);
+    } catch (error) {
+        console.error("❌ ไม่สามารถอัปเดตช่องสมาชิกได้:", error);
+    }
+}
+
+// 📢 เมื่อมีสมาชิกเข้า
+client.on("guildMemberAdd", async (member) => {
+    await updateMemberCount(member.guild);
+});
+
+// ❌ เมื่อมีสมาชิกออก
+client.on("guildMemberRemove", async (member) => {
+    await updateMemberCount(member.guild);
 });
 
 client.on("interactionCreate", async (interaction) => {
@@ -164,3 +192,4 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.TOKEN);
+ 
