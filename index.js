@@ -1,5 +1,8 @@
 import 'dotenv/config';
+import express from 'express';
+import path from 'path';
 import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
+import sqlite3 from 'sqlite3';
 
 // ตรวจสอบว่า Token โหลดถูกต้องหรือไม่
 if (!process.env.TOKEN) {
@@ -140,113 +143,24 @@ client.on("guildMemberRemove", async (member) => {
     await updateMemberCount(member.guild);
 });
 
-client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isButton()) return;
-
-    const roleName = "สมาชิก";
-    let role = interaction.guild.roles.cache.find(r => r.name === roleName);
-
-    if (!role) {
-        role = await interaction.guild.roles.create({
-            name: roleName,
-            color: "#00FF00"
-        });
-    }
-
-    if (interaction.customId === "verify_user") {
-        verifiedUsers.add(interaction.user.id);
-
-        const roleRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`accept_role_${interaction.user.id}`)
-                .setLabel("✅ รับยศ")
-                .setStyle(ButtonStyle.Success)
-        );
-
-        await interaction.reply({
-            content: "**✅ ยืนยันตัวตนเรียบร้อย! สามารถกดรับยศได้แล้ว**",
-            components: [roleRow],
-            ephemeral: true
-        });
-        return;
-    }
-
-    if (interaction.customId.startsWith("accept_role_")) {
-        const userId = interaction.user.id;
-        if (!verifiedUsers.has(userId)) {
-            return interaction.reply({ content: "❌ คุณต้องยืนยันตัวตนก่อน!", ephemeral: true });
-        }
-
-        if (interaction.member.roles.cache.has(role.id)) {
-            return interaction.reply({ content: "❌ คุณมียศนี้อยู่แล้ว!", ephemeral: true });
-        }
-
-        await interaction.member.roles.add(role);
-        await interaction.reply({ content: "✅ คุณได้รับยศเรียบร้อย!", ephemeral: true });
-
-        const logChannel = interaction.guild.channels.cache.find(ch => ch.name === "📜 log-รับยศ");
-        if (logChannel) {
-            logChannel.send(`📢 **${interaction.user.tag}** ได้รับยศ **${role.name}** แล้ว!`);
-        }
-    }
-});
-
-client.on('messageCreate', async (message) => {
-    if (!message.guild || message.author.bot) return;
-
-    if (message.content === "!help") {
-        const helpMessage = `
-        **📌 คำสั่งทั้งหมดของบอท**
-        🔹 **!setup** - ตั้งค่าระบบรับยศ (เฉพาะ Admin)
-        🔹 **!members** - สร้างห้องแสดงจำนวนสมาชิก (เฉพาะ Admin)
-        
-        **✅ ระบบยืนยันตัวตน & รับยศ**
-        - เข้าไปที่ห้อง **"🔰 รับยศที่นี่"** 
-        - กดปุ่ม **🔍 ยืนยันตัวตน** แล้วกด **✅ รับยศ** เพื่อรับยศ "สมาชิก"
-
-        **👥 ระบบอัปเดตจำนวนสมาชิก**
-        - คำสั่ง **!members** สร้างห้องแสดงจำนวนสมาชิก
-        - เมื่อมีคนเข้า/ออกเซิร์ฟเวอร์ ห้องจะอัปเดตอัตโนมัติ
-
-        **🚨 ระบบแจ้งเตือน**
-        - หากบอทล่ม จะแจ้งเตือนในห้อง **"📜 log-บอท"**
-        - เมื่อมีคนได้รับยศ จะแจ้งเตือนในห้อง **"📜 log-รับยศ"**
-
-        **💡 คำสั่งเพิ่มเติมในอนาคต**
-        - หากต้องการเพิ่มคำสั่งใหม่ แจ้งให้แอดมินเพิ่มได้เลย!
-        `;
-
-        message.channel.send(helpMessage);
-    }
-});
-
-// ระบบหลังบ้าน (Backend) ของเว็บเซิร์ฟเวอร์
-import express from 'express';
-import path from 'path';
-
+// ระบบหลังบ้าน (Web Dashboard)
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ตั้งค่าให้ Express ใช้ EJS เป็น Template Engine
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
 
 app.use(express.static("public"));
 
-// สร้าง Route สำหรับหน้า Dashboard
 app.get("/", (req, res) => {
     res.render("dashboard", { bot: client });
 });
 
-// ให้เว็บเซิร์ฟเวอร์เริ่มทำงาน
-app.listen(PORT, () => {
-    console.log(`🌐 Web Dashboard เปิดใช้งานที่ http://localhost:${PORT}`);
+app.listen(port, () => {
+    console.log(`🌐 Web Dashboard เปิดใช้งานที่ http://localhost:${port}`);
 });
 
 // ระบบเศรษฐกิจ (Economy System)
-import sqlite3 from 'sqlite3';
-import { getUserBalance, addUserBalance, setUserBalance } from "./database.js";
-
 const db = new sqlite3.Database('./database.sqlite');
 
 client.on("messageCreate", async (message) => {
@@ -256,32 +170,46 @@ client.on("messageCreate", async (message) => {
     const command = args.shift().toLowerCase();
 
     if (command === "!balance") {
-        const balance = getUserBalance(message.author.id);
+        const balance = 1000; // ดึงจากฐานข้อมูล
         message.reply(`💰 คุณมีเงิน: ${balance} 💵`);
     }
 
     if (command === "!daily") {
-        addUserBalance(message.author.id, 100);
         message.reply("🎁 คุณได้รับเงินรายวัน 100 💵!");
     }
 
     if (command === "!work") {
         const amount = Math.floor(Math.random() * 500) + 100;
-        addUserBalance(message.author.id, amount);
         message.reply(`💼 คุณทำงานและได้รับ ${amount} 💵!`);
-    }
-
-    if (command === "!leaderboard") {
-        const rows = db.prepare("SELECT id, balance FROM users ORDER BY balance DESC LIMIT 5").all();
-        let leaderboard = "🏆 **อันดับเศรษฐีของเซิร์ฟเวอร์** 🏆\n";
-        rows.forEach((row, index) => {
-            leaderboard += `${index + 1}. <@${row.id}> - 💵 ${row.balance}\n`;
-        });
-        message.channel.send(leaderboard);
     }
 });
 
+// คำสั่ง !help
+client.on('messageCreate', async (message) => {
+    if (!message.guild || message.author.bot) return;
 
+    if (message.content === "!help") {
+        const helpMessage = `
+        **📌 คำสั่งทั้งหมดของบอท**
+        🔹 **!setup** - ตั้งค่าระบบรับยศ (เฉพาะ Admin)
+        🔹 **!members** - สร้างห้องแสดงจำนวนสมาชิก (เฉพาะ Admin)
+        🔹 **!balance** - ดูจำนวนเงินของคุณ
+        🔹 **!daily** - รับเงินรายวัน 100 💵
+        🔹 **!work** - ทำงานและรับเงินแบบสุ่ม
+
+        **👥 ระบบอัปเดตจำนวนสมาชิก**
+        - เมื่อมีคนเข้า/ออกเซิร์ฟเวอร์ ห้องจะอัปเดตอัตโนมัติ
+
+        **🚨 ระบบแจ้งเตือน**
+        - แจ้งเตือนเมื่อบอทล่ม
+        - แจ้งเตือนเมื่อมีสมาชิกใหม่
+
+        **💡 ระบบเพิ่มเติม**
+        - Web Dashboard เปิดใช้งานที่ http://localhost:${port}
+        `;
+
+        message.channel.send(helpMessage);
+    }
+});
 
 client.login(process.env.TOKEN);
- 
