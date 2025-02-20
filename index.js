@@ -187,71 +187,58 @@ client.on("messageCreate", async (message) => {
     }
 });
 
-// ✅ ฟังก์ชันอัปเดตข้อมูลเซิร์ฟเวอร์
+// ✅ ฟังก์ชันอัปเดตข้อมูล Server Stats แบบเรียลไทม์
 async function updateServerStats(guild) {
     if (!guild) return;
-    
-    // หา Channel ที่มีอยู่แล้ว
-    let memberCountChannel = guild.channels.cache.find(ch => ch.name.startsWith("👥 สมาชิก:"));
+
+    let memberChannel = guild.channels.cache.find(ch => ch.name.startsWith("👥 สมาชิก:"));
     let textChannelCount = guild.channels.cache.find(ch => ch.name.startsWith("💬 ข้อความ:"));
     let voiceChannelCount = guild.channels.cache.find(ch => ch.name.startsWith("🔊 เสียง:"));
     let roleCount = guild.channels.cache.find(ch => ch.name.startsWith("🎭 บทบาท:"));
 
-    // ถ้ายังไม่มี Channel, ให้สร้างขึ้นมาใหม่
-    if (!memberCountChannel) {
-        memberCountChannel = await guild.channels.create({
-            name: `👥 สมาชิก: ${guild.memberCount}`,
-            type: ChannelType.GuildVoice,
-            permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }]
-        });
-    }
-
-    if (!textChannelCount) {
-        textChannelCount = await guild.channels.create({
-            name: `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`,
-            type: ChannelType.GuildVoice,
-            permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }]
-        });
-    }
-
-    if (!voiceChannelCount) {
-        voiceChannelCount = await guild.channels.create({
-            name: `🔊 เสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`,
-            type: ChannelType.GuildVoice,
-            permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }]
-        });
-    }
-
-    if (!roleCount) {
-        roleCount = await guild.channels.create({
-            name: `🎭 บทบาท: ${guild.roles.cache.size}`,
-            type: ChannelType.GuildVoice,
-            permissionOverwrites: [{ id: guild.id, deny: [PermissionsBitField.Flags.Connect] }]
-        });
-    }
-
-    // อัปเดตข้อมูลให้ช่องที่มีอยู่
     try {
-        await memberCountChannel.setName(`👥 สมาชิก: ${guild.memberCount}`);
-        await textChannelCount.setName(`💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`);
-        await voiceChannelCount.setName(`🔊 เสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`);
-        await roleCount.setName(`🎭 บทบาท: ${guild.roles.cache.size}`);
-        console.log(`🔄 อัปเดต Server Stats ของ ${guild.name}`);
+        if (memberChannel) await memberChannel.setName(`👥 สมาชิก: ${guild.memberCount}`);
+        if (textChannelCount) await textChannelCount.setName(`💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`);
+        if (voiceChannelCount) await voiceChannelCount.setName(`🔊 เสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`);
+        if (roleCount) await roleCount.setName(`🎭 บทบาท: ${guild.roles.cache.size}`);
+
+        console.log(`🔄 อัปเดต Server Stats สำเร็จในเซิร์ฟเวอร์: ${guild.name}`);
     } catch (error) {
         console.error("❌ ไม่สามารถอัปเดตช่องสถิติได้:", error);
     }
 }
 
-// 📢 เมื่อมีสมาชิกเข้า
+// 📢 อัปเดต Stats เมื่อมีสมาชิกเข้า / ออก
 client.on("guildMemberAdd", async (member) => {
     await updateServerStats(member.guild);
 });
 
-// ❌ เมื่อมีสมาชิกออก
 client.on("guildMemberRemove", async (member) => {
     await updateServerStats(member.guild);
 });
 
+// 📢 อัปเดต Stats เมื่อมีการสร้าง / ลบห้องแชท
+client.on("channelCreate", async (channel) => {
+    await updateServerStats(channel.guild);
+});
+
+client.on("channelDelete", async (channel) => {
+    await updateServerStats(channel.guild);
+});
+
+// ✅ คำสั่ง !setupstats (สร้างห้อง Server Stats)
+client.on("messageCreate", async (message) => {
+    if (!message.guild || message.author.bot) return;
+
+    if (message.content === "!setupstats") {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return message.reply("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้!");
+        }
+
+        await setupServerStats(message.guild);
+        message.reply("✅ สร้างห้อง Server Stats เรียบร้อย!");
+    }
+});
 
 // ✅ ล็อกอินบอท
 client.login(process.env.TOKEN);
