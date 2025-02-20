@@ -1,7 +1,17 @@
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
+import sqlite3 from 'sqlite3';
 import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
+
+// ✅ เชื่อมต่อฐานข้อมูล SQLite3
+const db = new sqlite3.Database('./database.sqlite', (err) => {
+    if (err) {
+        console.error("❌ ไม่สามารถเชื่อมต่อฐานข้อมูล:", err.message);
+    } else {
+        console.log("✅ เชื่อมต่อฐานข้อมูลสำเร็จ!");
+    }
+});
 
 // ตรวจสอบว่า Token โหลดถูกต้องหรือไม่
 if (!process.env.TOKEN) {
@@ -22,7 +32,7 @@ client.once('ready', () => {
     console.log(`✅ บอท ${client.user.tag} พร้อมทำงานแล้ว!`);
 });
 
-// ระบบแจ้งเตือนหากบอทล่ม
+// ✅ ระบบแจ้งเตือนหากบอทล่ม
 process.on("uncaughtException", async (error) => {
     console.error("❌ เกิดข้อผิดพลาดที่ไม่ได้จัดการ:", error);
     const guild = client.guilds.cache.first();
@@ -34,92 +44,28 @@ process.on("uncaughtException", async (error) => {
     }
 });
 
-const verifiedUsers = new Set();
-let memberCountChannelId = null; // เก็บ ID ของช่องแสดงจำนวนสมาชิก
+// ✅ ระบบแจ้งเตือนเมื่อมีสมาชิกเข้า / ออก
+client.on("guildMemberAdd", async (member) => {
+    const welcomeChannel = member.guild.channels.cache.find(ch => ch.name === "📢 แจ้งเตือนเข้าออก");
 
-client.on('messageCreate', async (message) => {
-    if (!message.guild || message.author.bot) return;
-
-    if (message.content === "!setup") {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return message.reply("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้!");
-        }
-
-        const category = await message.guild.channels.create({
-            name: "📌 รับยศ",
-            type: ChannelType.GuildCategory,
-            permissionOverwrites: [
-                {
-                    id: message.guild.id,
-                    allow: [PermissionsBitField.Flags.ViewChannel]
-                }
-            ]
-        });
-
-        const roleChannel = await message.guild.channels.create({
-            name: "🔰 รับยศที่นี่",
-            type: ChannelType.GuildText,
-            parent: category.id
-        });
-
-        await message.guild.channels.create({
-            name: "📜 log-รับยศ",
-            type: ChannelType.GuildText,
-            parent: category.id,
-            permissionOverwrites: [
-                {
-                    id: message.guild.id,
-                    deny: [PermissionsBitField.Flags.SendMessages]
-                }
-            ]
-        });
-
-        const verifyRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("verify_user")
-                .setLabel("🔍 ยืนยันตัวตน")
-                .setStyle(ButtonStyle.Primary)
-        );
-
-        await roleChannel.send({
-            content: "**👋 ยินดีต้อนรับ! กรุณากดยืนยันตัวตนก่อนรับยศ**",
-            components: [verifyRow]
-        });
-
-        message.reply("✅ ตั้งค่าห้องรับยศและล็อกแจ้งเตือนเรียบร้อย!");
+    if (welcomeChannel) {
+        welcomeChannel.send(`👋 **ยินดีต้อนรับ** <@${member.id}> สู่เซิร์ฟเวอร์! 🎉`);
     }
-    
-    // 🔹 ระบบอัปเดตจำนวนสมาชิกแบบเรียลไทม์
-    if (message.content === "!members") {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return message.reply("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้!");
-        }
 
-        let existingChannel = message.guild.channels.cache.find(ch => ch.name.startsWith("👥 สมาชิกทั้งหมด:"));
-        
-        if (existingChannel) {
-            memberCountChannelId = existingChannel.id; // บันทึก ID ของช่องที่มีอยู่
-            return message.reply("⚠️ มีช่องสมาชิกอยู่แล้ว!");
-        }
-
-        // สร้างช่อง Voice Channel สำหรับแสดงจำนวนสมาชิก
-        const memberChannel = await message.guild.channels.create({
-            name: `👥 สมาชิกทั้งหมด: ${message.guild.memberCount}`,
-            type: ChannelType.GuildVoice,
-            permissionOverwrites: [
-                {
-                    id: message.guild.id,
-                    deny: [PermissionsBitField.Flags.Connect] // ป้องกันคนเข้า
-                }
-            ]
-        });
-
-        memberCountChannelId = memberChannel.id; // บันทึก ID ช่องใหม่
-        message.reply(`✅ สร้างช่อง **${memberChannel.name}** แล้ว!`);
-    }
+    await updateMemberCount(member.guild);
 });
 
-// ฟังก์ชันอัปเดตจำนวนสมาชิกแบบเรียลไทม์
+client.on("guildMemberRemove", async (member) => {
+    const leaveChannel = member.guild.channels.cache.find(ch => ch.name === "📢 แจ้งเตือนเข้าออก");
+
+    if (leaveChannel) {
+        leaveChannel.send(`❌ **${member.user.tag}** ได้ออกจากเซิร์ฟเวอร์แล้ว... 😢`);
+    }
+
+    await updateMemberCount(member.guild);
+});
+
+// ✅ ฟังก์ชันอัปเดตจำนวนสมาชิกแบบเรียลไทม์
 async function updateMemberCount(guild) {
     let memberChannel = guild.channels.cache.find(ch => ch.name.startsWith("👥 สมาชิกทั้งหมด:"));
     if (!memberChannel) return;
@@ -132,35 +78,51 @@ async function updateMemberCount(guild) {
     }
 }
 
-// 📢 เมื่อมีสมาชิกเข้า
-client.on("guildMemberAdd", async (member) => {
-    await updateMemberCount(member.guild);
-});
-
-// ❌ เมื่อมีสมาชิกออก
-client.on("guildMemberRemove", async (member) => {
-    await updateMemberCount(member.guild);
-});
-
 // ✅ ระบบ Web Dashboard
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ตั้งค่าให้ Express ใช้ EJS
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
-
-// ตั้งค่าให้ Express โหลดไฟล์ Static
 app.use(express.static("public"));
 
-// Route หลัก (หน้า Dashboard)
 app.get("/", (req, res) => {
     res.render("dashboard", { botStatus: "✅ บอทกำลังทำงาน!" });
 });
 
-// เริ่มต้นเซิร์ฟเวอร์
 app.listen(PORT, () => {
     console.log(`🌐 Web Dashboard เปิดใช้งานที่ https://my-discord-bot-osbe.onrender.com`);
+});
+
+// ✅ ระบบเศรษฐกิจ (Economy System)
+client.on("messageCreate", async (message) => {
+    if (message.author.bot) return;
+
+    const args = message.content.split(" ");
+    const command = args.shift().toLowerCase();
+
+    if (command === "!balance") {
+        db.get("SELECT balance FROM users WHERE id = ?", [message.author.id], (err, row) => {
+            if (err) return console.error(err);
+            const balance = row ? row.balance : 0;
+            message.reply(`💰 คุณมีเงิน: ${balance} 💵`);
+        });
+    }
+
+    if (command === "!daily") {
+        db.run("UPDATE users SET balance = balance + 100 WHERE id = ?", [message.author.id], function (err) {
+            if (err) return console.error(err);
+            message.reply("🎁 คุณได้รับเงินรายวัน 100 💵!");
+        });
+    }
+
+    if (command === "!work") {
+        const amount = Math.floor(Math.random() * 500) + 100;
+        db.run("UPDATE users SET balance = balance + ? WHERE id = ?", [amount, message.author.id], function (err) {
+            if (err) return console.error(err);
+            message.reply(`💼 คุณทำงานและได้รับ ${amount} 💵!`);
+        });
+    }
 });
 
 // ✅ คำสั่ง !help
@@ -170,6 +132,9 @@ client.on("messageCreate", async (message) => {
         **📌 คำสั่งทั้งหมดของบอท**
         🔹 **!setup** - ตั้งค่าระบบรับยศ (เฉพาะ Admin)
         🔹 **!members** - สร้างห้องแสดงจำนวนสมาชิก (เฉพาะ Admin)
+        🔹 **!balance** - เช็คยอดเงินของคุณ
+        🔹 **!daily** - รับเงินรายวัน (100💵)
+        🔹 **!work** - ทำงานเพื่อรับเงิน (100 - 500💵)
         
         **✅ ระบบยืนยันตัวตน & รับยศ**
         - เข้าไปที่ห้อง **"🔰 รับยศที่นี่"** 
@@ -178,6 +143,10 @@ client.on("messageCreate", async (message) => {
         **👥 ระบบอัปเดตจำนวนสมาชิก**
         - คำสั่ง **!members** สร้างห้องแสดงจำนวนสมาชิก
         - เมื่อมีคนเข้า/ออกเซิร์ฟเวอร์ ห้องจะอัปเดตอัตโนมัติ
+
+        **📢 ระบบแจ้งเตือนเข้า-ออก**
+        - สมาชิกใหม่เข้าเซิร์ฟเวอร์ จะแสดงข้อความในห้อง **"📢 แจ้งเตือนเข้าออก"**
+        - สมาชิกออกจากเซิร์ฟเวอร์ จะแสดงข้อความในห้อง **"📢 แจ้งเตือนเข้าออก"**
 
         **🚨 ระบบแจ้งเตือน**
         - หากบอทล่ม จะแจ้งเตือนในห้อง **"📜 log-บอท"**
