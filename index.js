@@ -144,7 +144,7 @@ client.on("guildMemberRemove", async (member) => {
 
 // ✅ ระบบ Web Dashboard
 const app = express();
-const PORT = process.env.PORT || 3000; // ✅ แก้ไขตัวแปรให้แน่ใจว่ากำหนดค่าไว้
+const PORT = process.env.PORT || 8080; // ✅ แก้ไขตัวแปรให้แน่ใจว่ากำหนดค่าไว้
 
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
