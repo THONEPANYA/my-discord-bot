@@ -377,5 +377,89 @@ client.on("messageCreate", async (message) => {
     }
 });
 
+// SetupWelcom/Setupleave
+// 🛠️ เก็บข้อมูลห้องต้อนรับและห้องลา
+const guildSettings = new Map(); // ใช้เก็บค่าแบบชั่วคราว (ถ้าใช้ฐานข้อมูล MongoDB หรือ SQLite จะเก็บถาวร)
+
+// ✅ คำสั่ง !setwelcome (ตั้งค่าห้องต้อนรับ)
+client.on("messageCreate", async (message) => {
+    if (!message.guild || message.author.bot) return;
+
+    if (message.content.startsWith("!setwelcome")) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return message.reply("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้!");
+        }
+
+        const channel = message.mentions.channels.first();
+        if (!channel) return message.reply("⚠️ โปรดแท็กห้องแชทที่ต้องการใช้เป็นห้องต้อนรับ เช่น `!setwelcome #welcome`");
+
+        // บันทึกค่า
+        guildSettings.set(message.guild.id, { welcomeChannel: channel.id });
+
+        message.reply(`✅ ตั้งค่าห้องต้อนรับเป็น **${channel.name}** เรียบร้อย!`);
+    }
+});
+
+// ✅ คำสั่ง !setgoodbye (ตั้งค่าห้องลา)
+client.on("messageCreate", async (message) => {
+    if (!message.guild || message.author.bot) return;
+
+    if (message.content.startsWith("!setgoodbye")) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return message.reply("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้!");
+        }
+
+        const channel = message.mentions.channels.first();
+        if (!channel) return message.reply("⚠️ โปรดแท็กห้องแชทที่ต้องการใช้เป็นห้องลา เช่น `!setgoodbye #goodbye`");
+
+        // บันทึกค่า
+        const settings = guildSettings.get(message.guild.id) || {};
+        settings.goodbyeChannel = channel.id;
+        guildSettings.set(message.guild.id, settings);
+
+        message.reply(`✅ ตั้งค่าห้องลาเป็น **${channel.name}** เรียบร้อย!`);
+    }
+});
+
+// 📢 เมื่อมีสมาชิกเข้าเซิร์ฟเวอร์
+client.on("guildMemberAdd", async (member) => {
+    const settings = guildSettings.get(member.guild.id);
+    if (!settings || !settings.welcomeChannel) return;
+
+    const welcomeChannel = member.guild.channels.cache.get(settings.welcomeChannel);
+    if (!welcomeChannel) return;
+
+    // 🔹 สร้าง Embed สำหรับข้อความต้อนรับ
+    const welcomeEmbed = {
+        color: 0x00FF00,
+        title: "🎉 ยินดีต้อนรับ!",
+        description: `👋 **ยินดีต้อนรับ** <@${member.id}> สู่เซิร์ฟเวอร์ **${member.guild.name}**!\n\n🔹 อย่าลืมไปอ่านกฎในห้อง **📜︱rules** และแนะนำตัวเองใน **💬︱introductions**`,
+        thumbnail: { url: member.user.displayAvatarURL() },
+        footer: { text: `เรามีสมาชิกทั้งหมด ${member.guild.memberCount} คนแล้ว!` }
+    };
+
+    welcomeChannel.send({ embeds: [welcomeEmbed] });
+});
+
+// ❌ เมื่อสมาชิกออกจากเซิร์ฟเวอร์
+client.on("guildMemberRemove", async (member) => {
+    const settings = guildSettings.get(member.guild.id);
+    if (!settings || !settings.goodbyeChannel) return;
+
+    const goodbyeChannel = member.guild.channels.cache.get(settings.goodbyeChannel);
+    if (!goodbyeChannel) return;
+
+    // 🔹 สร้าง Embed สำหรับข้อความลา
+    const goodbyeEmbed = {
+        color: 0xFF0000,
+        title: "👋 ลาก่อน...",
+        description: `❌ **${member.user.tag}** ได้ออกจากเซิร์ฟเวอร์...\n\n🔹 หวังว่าจะได้พบกันอีกนะ!`,
+        thumbnail: { url: member.user.displayAvatarURL() },
+        footer: { text: `ตอนนี้เหลือสมาชิก ${member.guild.memberCount} คน` }
+    };
+
+    goodbyeChannel.send({ embeds: [goodbyeEmbed] });
+});
+
 // ✅ ล็อกอินบอท
 client.login(process.env.TOKEN);
