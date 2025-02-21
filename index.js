@@ -291,7 +291,7 @@ const userMessages = new Map();
 
 let antiSpamEnabled = true; // เปิดเป็น true หรือปิดเป็น false
 let antiRaidEnabled = true; // เปิดเป็น true หรือปิดเป็น false
-let spamLitmit = 5; // จำนวนข้อความที่ส่งต่อกัน 5 ครั้ง
+let spamLimit = 5; // จำนวนข้อความที่ส่งต่อกัน 5 ครั้ง
 
 const userMessageMap = new Map(); // เก็บข้อมูลจำนวนข้อความที่แต่ละคนส่ง
 
