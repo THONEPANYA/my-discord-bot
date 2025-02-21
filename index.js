@@ -20,6 +20,11 @@ const client = new Client({
 
 client.once('ready', () => {
     console.log(`✅ บอท ${client.user.tag} พร้อมทำงานแล้ว!`);
+    
+    client.user.setPresence({
+        activities: [{ name: 'เพลงใหม่ของ Sweet The Kid 🎵', type: 1 }], // Listening
+        status: 'idle' // Online (ปกติ), Idle (ว่าง), DND (ห้ามรบกวน)
+    });
 });
 
 // ✅ ระบบแจ้งเตือนหากบอทล่ม
