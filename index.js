@@ -286,6 +286,9 @@ client.on("messageCreate", async (message) => {
 
 
 // ✅ ระบบป้องกัน Raid & Spam (Anti-Raid & Anti-Spam)
+
+const userMessages = new Map();
+
 let antiSpamEnabled = true; // เปิดเป็น true หรือปิดเป็น false
 let antiRaidEnabled = true; // เปิดเป็น true หรือปิดเป็น false
 let spamLitmit = 5; // จำนวนข้อความที่ส่งต่อกัน 5 ครั้ง
