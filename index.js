@@ -3,6 +3,10 @@ import express from 'express';
 import path from 'path';
 import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
 
+let antiSpamEnabled = true; // เปิดเป็น true หรือปิดเป็น false
+let antiRaidEnabled = true; // เปิดเป็น true หรือปิดเป็น false
+let spamLimit = 5; // จำนวนข้อความสูงสุดที่ส่งได้ภายใน 5 วินาที
+
 // ✅ ตรวจสอบว่า Token โหลดถูกต้องหรือไม่
 if (!process.env.TOKEN) {
     console.error("❌ ไม่พบ TOKEN ในไฟล์ .env");
@@ -288,10 +292,6 @@ client.on("messageCreate", async (message) => {
 // ✅ ระบบป้องกัน Raid & Spam (Anti-Raid & Anti-Spam)
 
 const userMessages = new Map();
-
-let antiSpamEnabled = true; // เปิดเป็น true หรือปิดเป็น false
-let antiRaidEnabled = true; // เปิดเป็น true หรือปิดเป็น false
-let spamLimit = 5; // จำนวนข้อความที่ส่งต่อกัน 5 ครั้ง
 
 const userMessageMap = new Map(); // เก็บข้อมูลจำนวนข้อความที่แต่ละคนส่ง
 
