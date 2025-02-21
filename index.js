@@ -18,13 +18,26 @@ const client = new Client({
     ]
 });
 
+// Bot Status Change 10s
 client.once('ready', () => {
     console.log(`✅ บอท ${client.user.tag} พร้อมทำงานแล้ว!`);
-    
-    client.user.setPresence({
-        activities: [{ name: 'เพลงใหม่ของ Sweet The Kid 🎵', type: 1 }], // Listening
-        status: 'idle' // Online (ปกติ), Idle (ว่าง), DND (ห้ามรบกวน)
-    });
+
+    const statuses = [
+        { name: '🎵 ฟังเพลงใหม่ของ Sweet The Kid', type: 2 }, // Listening
+        { name: '🔍 กำลังตรวจสอบเซิร์ฟเวอร์', type: 3 }, // Watching
+        { name: '💬 คุยกับสมาชิกใน Discord', type: 0 }, // Playing
+        { name: '📢 ใช้คำสั่ง !help', type: 0 } // Playing
+    ];
+
+    let i = 0;
+    setInterval(() => {
+        client.user.setPresence({
+            activities: [statuses[i]],
+            status: 'online' // 'online', 'idle', 'dnd', 'invisible'
+        });
+
+        i = (i + 1) % statuses.length; // เปลี่ยนไปยังสถานะถัดไป
+    }, 10000); // เปลี่ยนทุก 10 วินาที
 });
 
 // ✅ ระบบแจ้งเตือนหากบอทล่ม
