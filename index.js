@@ -145,7 +145,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.customId.startsWith("accept_role_")) {
-            const roleName = "Member"; // เปลี่ยนเป็นชื่อยศที่ต้องการให้
+            const roleName = "สมาชิก"; // แก้ไขคำผิดจาก "มาชิก"
             const role = interaction.guild.roles.cache.find(r => r.name === roleName);
             
             if (!role) {
@@ -174,10 +174,10 @@ async function updateStats(guild) {
     const voiceChannelsChannel = guild.channels.cache.get(statsChannels.voiceChannels);
     const rolesChannel = guild.channels.cache.get(statsChannels.roles);
 
-    if (membersChannel) membersChannel.setName(`👥 สมาชิก: ${guild.memberCount}`);
-    if (textChannelsChannel) textChannelsChannel.setName(`💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`);
-    if (voiceChannelsChannel) voiceChannelsChannel.setName(`🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`);
-    if (rolesChannel) rolesChannel.setName(`🎭 บทบาท: ${guild.roles.cache.size}`);
+    if (membersChannel) await membersChannel.setName(`👥 สมาชิก: ${guild.memberCount}`);
+    if (textChannelsChannel) await textChannelsChannel.setName(`💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`);
+    if (voiceChannelsChannel) await voiceChannelsChannel.setName(`🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`);
+    if (rolesChannel) await rolesChannel.setName(`🎭 บทบาท: ${guild.roles.cache.size}`);
 }
 
 // ✅ ล็อกอินบอท
