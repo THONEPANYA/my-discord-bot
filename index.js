@@ -174,6 +174,91 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+// /setup
+if (commandName === 'setup') {
+    // สร้างหมวดหมู่ "📌 ระบบยืนยันตัวตน"
+    let category = interaction.guild.channels.cache.find(ch => ch.name === "📌 ระบบยืนยันตัวตน" && ch.type === 4);
+    if (!category) {
+        category = await interaction.guild.channels.create({
+            name: "📌 ระบบยืนยันตัวตน",
+            type: 4, // Category
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.id,
+                    allow: [PermissionsBitField.Flags.ViewChannel]
+                }
+            ]
+        });
+    }
+
+    // สร้างห้อง "🔰︱ยืนยันตัวตน" ในหมวดหมู่
+    let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
+    if (!verifyChannel) {
+        verifyChannel = await interaction.guild.channels.create({
+            name: "🔰︱ยืนยันตัวตน",
+            type: 0, // Text Channel
+            parent: category.id
+        });
+    }
+
+    // สร้างปุ่มให้กดยืนยันตัวตน
+    const verifyRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId("start_verification")
+            .setLabel("🔍 ยืนยันตัวตน")
+            .setStyle(ButtonStyle.Primary)
+    );
+
+    await verifyChannel.send({
+        content: "**👋 กรุณากดยืนยันตัวตนก่อนรับยศ**",
+        components: [verifyRow]
+    });
+
+    await interaction.reply("✅ ตั้งค่าระบบยืนยันตัวตนเรียบร้อย!");
+}
+
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    if (interaction.customId === "start_verification") {
+        const roleRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`accept_role_${interaction.user.id}`)
+                .setLabel("✅ รับยศ")
+                .setStyle(ButtonStyle.Success)
+        );
+
+        await interaction.reply({
+            content: "**✅ ยืนยันตัวตนสำเร็จ! กรุณากดปุ่มด้านล่างเพื่อรับยศ**",
+            components: [roleRow],
+            ephemeral: true
+        });
+    }
+
+    if (interaction.customId.startsWith("accept_role_")) {
+        const roleName = "สมาชิก";
+        let role = interaction.guild.roles.cache.find(r => r.name === roleName);
+
+        if (!role) {
+            role = await interaction.guild.roles.create({
+                name: roleName,
+                color: "#00FF00"
+            });
+        }
+
+        if (interaction.member.roles.cache.has(role.id)) {
+            return interaction.reply({ content: "❌ คุณมียศนี้อยู่แล้ว!", ephemeral: true });
+        }
+
+        await interaction.member.roles.add(role);
+        await interaction.reply({ content: "✅ คุณได้รับยศเรียบร้อย!", ephemeral: true });
+
+        const logChannel = interaction.guild.channels.cache.find(ch => ch.name === "📜 log-รับยศ");
+        if (logChannel) {
+            logChannel.send(`📢 **${interaction.user.tag}** ได้รับยศ **${role.name}** แล้ว!`);
+        }
+    }
+});
 
 // ✅ ล็อกอินบอท
 client.login(process.env.TOKEN);
