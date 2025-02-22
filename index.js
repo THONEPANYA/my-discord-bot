@@ -157,7 +157,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.customId.startsWith("accept_role_")) {
-            const roleName = "Member"; // เปลี่ยนเป็นชื่อยศที่ต้องการให้
+            const roleName = "สมาชิก"; // เปลี่ยนเป็นชื่อยศที่ต้องการให้
             const role = interaction.guild.roles.cache.find(r => r.name === roleName);
             
             if (!role) {
