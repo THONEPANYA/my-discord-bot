@@ -144,7 +144,7 @@ client.on('interactionCreate', async (interaction) => {
 
 const guildSettings = new Map(); // เก็บค่าห้อง Welcome ของแต่ละเซิร์ฟเวอร์
 
-if (commandsName = 'setwelcom') {
+if (commandName === 'setwelcome') {
     const channel = interaction.options.getChannel('channel');
     console.log("📌 Channel Selected:", channel ? channel.name : "ไม่พบช่อง");
 
