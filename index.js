@@ -94,23 +94,30 @@ client.on('interactionCreate', async (interaction) => {
 
         if (commandName === 'setupstats') {
             await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
-
-            let statsCategory = interaction.guild.channels.cache.find(ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory);
+        
+            // หา Category ที่มีอยู่ก่อน
+            let statsCategory = interaction.guild.channels.cache
+                .filter(ch => ch.type === ChannelType.GuildCategory)
+                .sort((a, b) => a.position - b.position) // เรียงลำดับจากบนสุดลงล่างสุด
+                .first();
+        
             if (!statsCategory) {
                 statsCategory = await interaction.guild.channels.create({
                     name: "📊 Server Stats",
                     type: ChannelType.GuildCategory,
-                    permissionOverwrites: [{ id: interaction.guild.id, allow: [PermissionsBitField.Flags.ViewChannel] }]
+                    position: 0 // ✅ ตั้งค่าให้เป็นอันดับแรก
                 });
+            } else {
+                await statsCategory.setPosition(0); // ✅ ย้ายหมวดหมู่ไปอยู่ข้างบนสุด
             }
-
+        
             const stats = {
                 members: `👥 สมาชิก: ${interaction.guild.memberCount}`,
                 textChannels: `💬 ข้อความ: ${interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`,
                 voiceChannels: `🔊 ห้องเสียง: ${interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`,
                 roles: `🎭 บทบาท: ${interaction.guild.roles.cache.size}`
             };
-
+        
             for (const [key, name] of Object.entries(stats)) {
                 let channel = interaction.guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
                 if (!channel) {
@@ -118,12 +125,13 @@ client.on('interactionCreate', async (interaction) => {
                         name,
                         type: ChannelType.GuildVoice,
                         parent: statsCategory.id,
+                        position: 0, // ✅ ตั้งค่าห้องให้ไปอยู่ด้านบนของหมวดหมู่
                         permissionOverwrites: [{ id: interaction.guild.id, deny: [PermissionsBitField.Flags.Connect] }]
                     });
                 }
                 statsChannels[key] = channel.id;
             }
-
+        
             await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
         }
     }
@@ -143,7 +151,7 @@ client.on('interactionCreate', async (interaction) => {
                 ephemeral: true
             });
         }
-        
+
         if (interaction.customId.startsWith("accept_role_")) {
             const roleName = "สมาชิก"; // แก้ไขชื่อยศให้ถูกต้อง
             const role = interaction.guild.roles.cache.find(r => r.name === roleName);
