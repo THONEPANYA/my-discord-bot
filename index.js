@@ -143,22 +143,25 @@ client.on('interactionCreate', async (interaction) => {
                 ephemeral: true
             });
         }
-
+        
         if (interaction.customId.startsWith("accept_role_")) {
-            const roleName = "สมาชิก"; // แก้ไขคำผิดจาก "มาชิก"
+            const roleName = "สมาชิก"; // แก้ไขชื่อยศให้ถูกต้อง
             const role = interaction.guild.roles.cache.find(r => r.name === roleName);
             
             if (!role) {
                 return await interaction.reply({ content: "❌ ไม่พบยศที่ต้องการ!", ephemeral: true });
             }
-
+        
             const member = interaction.guild.members.cache.get(interaction.user.id);
             if (!member) {
                 return await interaction.reply({ content: "❌ ไม่พบผู้ใช้ในเซิร์ฟเวอร์!", ephemeral: true });
             }
-
+        
+            await interaction.deferReply({ ephemeral: true }); // ✅ ป้องกันการส่งคำตอบซ้ำ
+        
             await member.roles.add(role);
-            await interaction.reply({ content: `✅ ได้รับยศ **${role.name}** เรียบร้อย!`, ephemeral: true });
+        
+            await interaction.editReply({ content: `✅ ได้รับยศ **${role.name}** เรียบร้อย!` }); // ✅ ใช้ editReply แทน reply
         }
     }
 });
