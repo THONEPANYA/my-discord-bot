@@ -62,7 +62,7 @@ client.on('interactionCreate', async (interaction) => {
                 permissionOverwrites: [{ id: interaction.guild.id, allow: [PermissionsBitField.Flags.ViewChannel] }]
             });
         }
-
+    
         let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
         if (!verifyChannel) {
             verifyChannel = await interaction.guild.channels.create({
@@ -70,20 +70,24 @@ client.on('interactionCreate', async (interaction) => {
                 type: ChannelType.GuildText,
                 parent: category.id
             });
+        } else {
+            // ถ้ามีข้อความเก่าอยู่แล้ว ให้ลบทิ้งก่อน
+            const messages = await verifyChannel.messages.fetch();
+            messages.forEach(msg => msg.delete());
         }
-
+    
         const verifyRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("start_verification")
                 .setLabel("🔍 ยืนยันตัวตน")
                 .setStyle(ButtonStyle.Primary)
         );
-
+    
         await verifyChannel.send({
             content: "**👋 กรุณากดยืนยันตัวตนก่อนรับยศ**",
             components: [verifyRow]
         });
-
+    
         await interaction.reply("✅ ตั้งค่าระบบยืนยันตัวตนเรียบร้อย!");
     }
 
