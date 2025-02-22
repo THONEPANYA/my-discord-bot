@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, PermissionsBitField, SlashCommandBuilder, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits, PermissionsBitField, SlashCommandBuilder, REST, Routes, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import 'dotenv/config';
 
 // ตรวจสอบ Token
@@ -16,7 +16,7 @@ const client = new Client({
     ]
 });
 
-// 🔹 ลงทะเบียน Slash Commands
+// ลงทะเบียน Slash Commands
 const commands = [
     new SlashCommandBuilder()
         .setName('setup')
@@ -26,151 +26,8 @@ const commands = [
     new SlashCommandBuilder()
         .setName('setupstats')
         .setDescription('📊 สร้างห้อง Server Stats')
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
-
-    new SlashCommandBuilder()
-        .setName('antispam')
-        .setDescription('🚨 เปิด/ปิดระบบป้องกัน Spam')
-        .addStringOption(option =>
-            option.setName('status')
-                .setDescription('เลือกเปิด/ปิด')
-                .setRequired(true)
-                .addChoices(
-                    { name: 'เปิด', value: 'on' },
-                    { name: 'ปิด', value: 'off' }
-                ))
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
-
-    new SlashCommandBuilder()
-        .setName('setwelcome')
-        .setDescription('🎉 ตั้งค่าห้องแจ้งเตือนต้อนรับ')
-        .addChannelOption(option =>
-            option.setName('channel')
-                .setDescription('เลือกห้องสำหรับแจ้งเตือนต้อนรับ')
-                .setRequired(true))
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
-
-    new SlashCommandBuilder()
-        .setName('setgoodbye')
-        .setDescription('👋 ตั้งค่าห้องแจ้งเตือนลา')
-        .addChannelOption(option =>
-            option.setName('channel')
-                .setDescription('เลือกห้องสำหรับแจ้งเตือนลา')
-                .setRequired(true))
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
-
-    new SlashCommandBuilder()
-        .setName('help')
-        .setDescription('📜 แสดงรายการคำสั่งทั้งหมดของบอท')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
 ];
-
-// ✅ ฟังก์ชันลงทะเบียน Slash Commands
-async function registerCommands() {
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-    try {
-        console.log("📌 กำลังลงทะเบียน Slash Commands...");
-        await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-        console.log("✅ ลงทะเบียน Slash Commands สำเร็จ!");
-    } catch (error) {
-        console.error("❌ ลงทะเบียน Slash Commands ล้มเหลว:", error);
-    }
-}
-
-// ✅ เรียกใช้ registerCommands() ตอนบอทออนไลน์
-client.once('ready', async () => {
-    console.log(`✅ บอท ${client.user.tag} พร้อมใช้งานแล้ว!`);
-    await registerCommands();
-});
-
-// ✅ ฟังก์ชันจัดการ Slash Commands
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isCommand()) return;
-
-    const { commandName } = interaction;
-
-    if (commandName === 'setup') {
-        await interaction.reply("✅ ตั้งค่าระบบยืนยันตัวตนเรียบร้อย!");
-    }
-
-    if (commandName === 'setupstats') {
-        await interaction.reply("✅ สร้างห้อง Server Stats สำเร็จ!");
-    }
-
-    if (commandName === 'antispam') {
-        const status = interaction.options.getString('status');
-        if (status === 'on') {
-            antiSpamEnabled = true;
-            await interaction.reply("✅ เปิดระบบป้องกันสแปมแล้ว!");
-        } else {
-            antiSpamEnabled = false;
-            await interaction.reply("❌ ปิดระบบป้องกันสแปมแล้ว!");
-        }
-    }
-
-    if (commandName === 'setwelcome') {
-        const channel = interaction.options.getChannel('channel');
-        guildSettings.set(interaction.guild.id, { welcomeChannel: channel.id });
-        await interaction.reply(`✅ ตั้งค่าห้องต้อนรับเป็น **${channel.name}** เรียบร้อย!`);
-    }
-
-    if (commandName === 'setgoodbye') {
-        const channel = interaction.options.getChannel('channel');
-        const settings = guildSettings.get(interaction.guild.id) || {};
-        settings.goodbyeChannel = channel.id;
-        guildSettings.set(interaction.guild.id, settings);
-        await interaction.reply(`✅ ตั้งค่าห้องลาเป็น **${channel.name}** เรียบร้อย!`);
-    }
-
-    if (commandName === 'help') {
-        const helpMessage = `
-        **📌 คำสั่งทั้งหมดของบอท**
-        🔹 **/setup** - ตั้งค่าระบบรับยศ (เฉพาะ Admin)
-        🔹 **/setupstats** - สร้างห้องแสดงจำนวนสมาชิก (เฉพาะ Admin)
-        🔹 **/antispam on/off** - เปิดใช้งานป้องกันการ Spam (เฉพาะ Admin)
-        🔹 **/setwelcome #channel** - ตั้งค่าห้องต้อนรับ (เฉพาะ Admin)
-        🔹 **/setgoodbye #channel** - ตั้งค่าห้องลา (เฉพาะ Admin)
-        
-        **✅ ระบบยืนยันตัวตน & รับยศ**
-        - เข้าไปที่ห้อง **"🔰 ยืนยันตัวตน"** 
-        - กดปุ่ม **🔍 ยืนยันตัวตน** แล้วกด **✅ รับยศ** เพื่อรับยศ "สมาชิก"
-
-        **📢 ระบบแจ้งเตือนเข้า-ออก**
-        - สมาชิกใหม่เข้าเซิร์ฟเวอร์ จะแสดงข้อความในห้องที่ตั้งค่าไว้
-        - สมาชิกออกจากเซิร์ฟเวอร์ จะแสดงข้อความในห้องที่ตั้งค่าไว้
-        `;
-        await interaction.reply(helpMessage);
-    }
-});
-
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isCommand()) return;
-
-    const { commandName } = interaction;
-
-    if (commandName === 'setwelcome') {
-        // ตรวจสอบว่ามีห้องชื่อ "📢︱welcome" อยู่แล้วหรือไม่
-        let welcomeChannel = interaction.guild.channels.cache.find(ch => ch.name === "📢︱welcome");
-
-        if (!welcomeChannel) {
-            // สร้างห้องใหม่ ถ้าไม่มี
-            welcomeChannel = await interaction.guild.channels.create({
-                name: "📢︱welcome",
-                type: 0, // Text Channel
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.id,
-                        allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
-                    }
-                ]
-            });
-        }
-
-        // บันทึกค่าห้องต้อนรับใน guildSettings
-        guildSettings.set(interaction.guild.id, { welcomeChannel: welcomeChannel.id });
-
-        await interaction.reply(`✅ **สร้างห้องต้อนรับใหม่สำเร็จ!** ห้อง: ${welcomeChannel}`);
-    }
-});
 
 // ✅ ลงทะเบียน Slash Commands
 async function registerCommands() {
@@ -274,66 +131,73 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// ✅ ระบบยืนยันตัวตน
-client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isButton()) return;
+const antiSpamEnabled = true;
+const antiRaidEnabled = true;
+const spamLimit = 5;
+const userMessages = new Map();
+const joinTimestamps = [];
+const joinLimit = 5; 
 
-    if (interaction.customId === "start_verification") {
-        const roleRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`accept_role_${interaction.user.id}`)
-                .setLabel("✅ รับยศ")
-                .setStyle(ButtonStyle.Success)
-        );
+client.on("messageCreate", async (message) => {
+    if (!antiSpamEnabled || message.author.bot || !message.guild) return;
+    const now = Date.now();
+    const userId = message.author.id;
 
-        await interaction.reply({
-            content: "**✅ ยืนยันตัวตนสำเร็จ! กรุณากดปุ่มด้านล่างเพื่อรับยศ**",
-            components: [roleRow],
-            ephemeral: true
-        });
+    if (!userMessages.has(userId)) {
+        userMessages.set(userId, []);
     }
 
-    if (interaction.customId.startsWith("accept_role_")) {
-        const roleName = "สมาชิก";
-        let role = interaction.guild.roles.cache.find(r => r.name === roleName);
-
-        if (!role) {
-            role = await interaction.guild.roles.create({ name: roleName, color: "#00FF00" });
-        }
-
-        if (interaction.member.roles.cache.has(role.id)) {
-            return interaction.reply({ content: "❌ คุณมียศนี้อยู่แล้ว!", ephemeral: true });
-        }
-
-        await interaction.member.roles.add(role);
-        await interaction.reply({ content: "✅ คุณได้รับยศเรียบร้อย!", ephemeral: true });
-
-        const logChannel = interaction.guild.channels.cache.find(ch => ch.name === "📜 log-รับยศ");
-        if (logChannel) {
-            logChannel.send(`📢 **${interaction.user.tag}** ได้รับยศ **${role.name}** แล้ว!`);
-        }
+    const timestamps = userMessages.get(userId);
+    timestamps.push(now);
+    while (timestamps.length > 0 && timestamps[0] < now - 5000) {
+        timestamps.shift();
+    }
+    if (timestamps.length > spamLimit) {
+        await message.delete();
+        message.channel.send(`🚨 <@${userId}> หยุดสแปมข้อความ!`);
     }
 });
 
-// ✅ ล็อกอินบอท
-client.login(process.env.TOKEN);
-
-// 📢 อัปเดต Stats เมื่อมีสมาชิกเข้า / ออก
 client.on("guildMemberAdd", async (member) => {
-    await updateServerStats(member.guild);
+    if (!antiRaidEnabled) return;
+    const now = Date.now();
+    joinTimestamps.push(now);
+    while (joinTimestamps.length > 0 && joinTimestamps[0] < now - 10000) {
+        joinTimestamps.shift();
+    }
+    if (joinTimestamps.length > joinLimit) {
+        await member.kick("🚨 ระบบป้องกัน Raid ตรวจพบการเข้าร่วมผิดปกติ!");
+    }
+});
+
+client.on("guildMemberAdd", async (member) => {
+    const settings = guildSettings.get(member.guild.id);
+    if (!settings || !settings.welcomeChannel) return;
+    const welcomeChannel = member.guild.channels.cache.get(settings.welcomeChannel);
+    if (!welcomeChannel) return;
+    const welcomeEmbed = {
+        color: 0x00FF00,
+        title: "🎉 ยินดีต้อนรับ!",
+        description: `👋 **ยินดีต้อนรับ** <@${member.id}> สู่เซิร์ฟเวอร์ **${member.guild.name}**!`,
+        thumbnail: { url: member.user.displayAvatarURL() },
+        footer: { text: `เรามีสมาชิกทั้งหมด ${member.guild.memberCount} คนแล้ว!` }
+    };
+    welcomeChannel.send({ embeds: [welcomeEmbed] });
 });
 
 client.on("guildMemberRemove", async (member) => {
-    await updateServerStats(member.guild);
-});
-
-// 📢 อัปเดต Stats เมื่อมีการสร้าง / ลบห้องแชท
-client.on("channelCreate", async (channel) => {
-    await updateServerStats(channel.guild);
-});
-
-client.on("channelDelete", async (channel) => {
-    await updateServerStats(channel.guild);
+    const settings = guildSettings.get(member.guild.id);
+    if (!settings || !settings.goodbyeChannel) return;
+    const goodbyeChannel = member.guild.channels.cache.get(settings.goodbyeChannel);
+    if (!goodbyeChannel) return;
+    const goodbyeEmbed = {
+        color: 0xFF0000,
+        title: "👋 ลาก่อน...",
+        description: `❌ **${member.user.tag}** ได้ออกจากเซิร์ฟเวอร์...`,
+        thumbnail: { url: member.user.displayAvatarURL() },
+        footer: { text: `ตอนนี้เหลือสมาชิก ${member.guild.memberCount} คน` }
+    };
+    goodbyeChannel.send({ embeds: [goodbyeEmbed] });
 });
 
 // ✅ ล็อกอินบอท
