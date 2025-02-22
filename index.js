@@ -144,15 +144,23 @@ client.on('interactionCreate', async (interaction) => {
 
 const guildSettings = new Map(); // เก็บค่าห้อง Welcome ของแต่ละเซิร์ฟเวอร์
 
-if (commandName === 'setwelcome') {
-    const channel = interaction.options.getChannel('channel');
-    console.log("📌 Channel Selected:", channel ? channel.name : "ไม่พบช่อง");
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isCommand()) return;
 
-    if (channel) {
+    const { commandName } = interaction;
+
+    if (commandName === 'setwelcome') {
+        const channel = interaction.options.getChannel('channel');
+        console.log("📌 Channel Selected:", channel ? channel.name : "ไม่พบช่อง");
+
+        if (!channel) {
+            return interaction.reply({ content: "❌ กรุณาเลือกช่องแชทให้ถูกต้อง!", ephemeral: true });
+        }
+
         guildSettings.set(interaction.guild.id, { welcomeChannel: channel.id });
         await interaction.reply(`✅ ตั้งค่าห้องต้อนรับเป็น **${channel.name}** เรียบร้อย!`);
     }
-}
+});
 
 
 // ✅ ล็อกอินบอท
