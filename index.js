@@ -87,6 +87,27 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply("✅ ตั้งค่าระบบยืนยันตัวตนเรียบร้อย!");
     }
 
+    client.on("interactionCreate", async (interaction) => {
+        if (!interaction.isButton()) return;
+    
+        console.log(`🔹 ปุ่มกดทำงาน: ${interaction.customId}`); // เช็คว่าปุ่มทำงานหรือไม่
+    
+        if (interaction.customId === "start_verification") {
+            const roleRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`accept_role_${interaction.user.id}`)
+                    .setLabel("✅ รับยศ")
+                    .setStyle(ButtonStyle.Success)
+            );
+    
+            await interaction.reply({
+                content: "**✅ ยืนยันตัวตนสำเร็จ! กรุณากดปุ่มด้านล่างเพื่อรับยศ**",
+                components: [roleRow],
+                ephemeral: true
+            });
+        }
+    });
+
     if (commandName === 'setupstats') {
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
 
