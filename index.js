@@ -150,15 +150,27 @@ client.on('interactionCreate', async (interaction) => {
     const { commandName } = interaction;
 
     if (commandName === 'setwelcome') {
-        const channel = interaction.options.getChannel('channel');
-        console.log("📌 Channel Selected:", channel ? channel.name : "ไม่พบช่อง");
+        // ตรวจสอบว่ามีห้องชื่อ "📢︱welcome" อยู่แล้วหรือไม่
+        let welcomeChannel = interaction.guild.channels.cache.find(ch => ch.name === "📢︱welcome");
 
-        if (!channel) {
-            return interaction.reply({ content: "❌ กรุณาเลือกช่องแชทให้ถูกต้อง!", ephemeral: true });
+        if (!welcomeChannel) {
+            // สร้างห้องใหม่ ถ้าไม่มี
+            welcomeChannel = await interaction.guild.channels.create({
+                name: "📢︱welcome",
+                type: 0, // Text Channel
+                permissionOverwrites: [
+                    {
+                        id: interaction.guild.id,
+                        allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+                    }
+                ]
+            });
         }
 
-        guildSettings.set(interaction.guild.id, { welcomeChannel: channel.id });
-        await interaction.reply(`✅ ตั้งค่าห้องต้อนรับเป็น **${channel.name}** เรียบร้อย!`);
+        // บันทึกค่าห้องต้อนรับใน guildSettings
+        guildSettings.set(interaction.guild.id, { welcomeChannel: welcomeChannel.id });
+
+        await interaction.reply(`✅ **สร้างห้องต้อนรับใหม่สำเร็จ!** ห้อง: ${welcomeChannel}`);
     }
 });
 
