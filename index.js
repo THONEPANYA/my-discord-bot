@@ -133,6 +133,17 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
+
+    if (interaction.commandName === 'balance') {
+        let user = await Economy.findOne({ userId: interaction.user.id });
+
+        if (!user) {
+            user = new Economy({ userId: interaction.user.id });
+            await user.save();
+        }
+
+        await interaction.reply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
+    }
 });
 
 // ✅ ฟังก์ชันอัปเดตข้อมูล Server Stats แบบเรียลไทม์
