@@ -6,6 +6,7 @@ import {
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import Economy from './models/economy.js';
+const Economy = require('./models/economy.js');
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
