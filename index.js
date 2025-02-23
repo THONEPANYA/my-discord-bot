@@ -156,7 +156,7 @@ client.on("guildMemberRemove", async (member) => updateStats(member.guild));
 
 // ✅ คำสั่ง `/setupstats` ตั้งค่าห้องสถิติ Server
 client.on('interactionCreate', async (interaction) => {
-    if (interaction.commandName === 'setupstats') {
+    if (interaction.commandName === 'stats') {
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
 
         let statsCategory = interaction.guild.channels.cache.find(
