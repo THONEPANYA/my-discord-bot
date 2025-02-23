@@ -42,7 +42,31 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName('help')
-        .setDescription('📖 ดูคำสั่งที่สามารถใช้ได้')
+        .setDescription('📖 ดูคำสั่งที่สามารถใช้ได้'),
+
+    new SlashCommandBuilder()
+        .setName('balance')
+        .setDescription('💰 เช็คยอดเงินของคุณ'),
+    
+    new SlashCommandBuilder()
+        .setName('daily')
+        .setDescription('💵 รับเงินประจำวัน'),
+
+    new SlashCommandBuilder()
+        .setName('transfer')
+        .setDescription('💸 โอนเงินให้สมาชิก')
+        .addUserOption(option => option.setName('user').setDescription('ผู้รับเงิน').setRequired(true))
+        .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('deposit')
+        .setDescription('🏦 ฝากเงินเข้าธนาคาร')
+        .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('withdraw')
+        .setDescription('🏦 ถอนเงินจากธนาคาร')
+        .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
 ];
 
 const statsChannels = {};
