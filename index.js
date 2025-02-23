@@ -7,6 +7,19 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import Economy from './models/economy.js';
 
+import fs from 'fs';
+import path from 'path';
+
+
+const economyCommandsPath = path.join(__dirname, 'commands/economy');
+const economyCommandFiles = fs.readdirSync(economyCommandsPath).filter(file => file.endsWith('.js'));
+
+for (const file of economyCommandFiles) {
+    import(`./commands/economy/${file}`).then(command => {
+        client.commands.set(command.data.name, command);
+    }).catch(err => console.error(`❌ ไม่สามารถโหลดคำสั่ง ${file}:`, err));
+}
+
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
 // ✅ เชื่อมต่อ MongoDB
@@ -63,6 +76,9 @@ const commands = [
         .setDescription('🏦 ถอนเงินจากธนาคาร')
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
 ];
+
+await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
+console.log("✅ ลงทะเบียน Slash Commands สำเร็จ!");
 
 // ✅ ฟังก์ชันลงทะเบียน Slash Commands
 async function registerCommands() {
