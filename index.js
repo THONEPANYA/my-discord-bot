@@ -4,21 +4,22 @@ import {
     ActionRowBuilder, ButtonBuilder, ButtonStyle 
 } from 'discord.js';
 import 'dotenv/config';
-
 import mongoose from 'mongoose';
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
+// ✅ เชื่อมต่อ MongoDB
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('✅ เชื่อมต่อ MongoDB สำเร็จ!'))
     .catch(err => console.error('❌ ไม่สามารถเชื่อมต่อ MongoDB:', err));
 
-// ตรวจสอบ Token
+// ✅ ตรวจสอบ Token
 if (!process.env.TOKEN || !process.env.CLIENT_ID) {
     console.error("❌ กรุณาใส่ TOKEN และ CLIENT_ID ใน .env");
     process.exit(1);
 }
 
+// ✅ ตั้งค่าคลาส Client
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -28,50 +29,41 @@ const client = new Client({
     ]
 });
 
-// ลงทะเบียน Slash Commands
+// ✅ ลงทะเบียน Slash Commands
 const commands = [
     new SlashCommandBuilder()
         .setName('setup')
         .setDescription('📌 ตั้งค่าระบบยืนยันตัวตน')
         .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
-
     new SlashCommandBuilder()
-        .setName('setupstats')
+        .setName('stats')
         .setDescription('📊 ตั้งค่าห้อง Server Stats')
         .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
-
     new SlashCommandBuilder()
         .setName('help')
         .setDescription('📖 ดูคำสั่งที่สามารถใช้ได้'),
-
     new SlashCommandBuilder()
         .setName('balance')
         .setDescription('💰 เช็คยอดเงินของคุณ'),
-    
     new SlashCommandBuilder()
         .setName('daily')
         .setDescription('💵 รับเงินประจำวัน'),
-
     new SlashCommandBuilder()
         .setName('transfer')
         .setDescription('💸 โอนเงินให้สมาชิก')
         .addUserOption(option => option.setName('user').setDescription('ผู้รับเงิน').setRequired(true))
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
-
     new SlashCommandBuilder()
         .setName('deposit')
         .setDescription('🏦 ฝากเงินเข้าธนาคาร')
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
-
     new SlashCommandBuilder()
         .setName('withdraw')
         .setDescription('🏦 ถอนเงินจากธนาคาร')
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
 ];
 
-const statsChannels = {};
-
-// ✅ ลงทะเบียน Slash Commands
+// ✅ ฟังก์ชันลงทะเบียน Slash Commands
 async function registerCommands() {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
@@ -83,7 +75,7 @@ async function registerCommands() {
     }
 }
 
-// ✅ บอทพร้อมทำงาน
+// ✅ เมื่อบอทพร้อมทำงาน
 client.once('ready', async () => {
     console.log(`✅ บอท ${client.user.tag} พร้อมใช้งานแล้ว!`);
     await registerCommands();
@@ -141,7 +133,29 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
+});
 
+// ✅ ฟังก์ชันอัปเดตข้อมูล Server Stats แบบเรียลไทม์
+async function updateStats(guild) {
+    const members = `👥 สมาชิก: ${guild.memberCount}`;
+    const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
+    const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
+
+    const stats = { members, textChannels, voiceChannels };
+
+    for (const [key, name] of Object.entries(stats)) {
+        let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
+        if (channel) {
+            await channel.setName(name).catch(console.error);
+        }
+    }
+}
+
+client.on("guildMemberAdd", async (member) => updateStats(member.guild));
+client.on("guildMemberRemove", async (member) => updateStats(member.guild));
+
+// ✅ คำสั่ง `/setupstats` ตั้งค่าห้องสถิติ Server
+client.on('interactionCreate', async (interaction) => {
     if (interaction.commandName === 'setupstats') {
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
 
@@ -157,49 +171,9 @@ client.on('interactionCreate', async (interaction) => {
             });
         }
 
-        const stats = {
-            members: `👥 สมาชิก: ${interaction.guild.memberCount}`,
-            textChannels: `💬 ข้อความ: ${interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`,
-            voiceChannels: `🔊 ห้องเสียง: ${interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`
-        };
-
-        for (const [key, name] of Object.entries(stats)) {
-            let channel = interaction.guild.channels.cache.find(
-                ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice
-            );
-
-            if (!channel) {
-                channel = await interaction.guild.channels.create({
-                    name,
-                    type: ChannelType.GuildVoice,
-                    parent: statsCategory.id,
-                    permissionOverwrites: [{ id: interaction.guild.id, deny: [PermissionsBitField.Flags.Connect] }]
-                });
-            }
-        }
-
+        await updateStats(interaction.guild);
         await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
-        updateStats(interaction.guild);
     }
-
-    async function updateStats(guild) {
-        const members = `👥 สมาชิก: ${guild.memberCount}`;
-        const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
-        const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
-    
-        const stats = { members, textChannels, voiceChannels };
-    
-        for (const [key, name] of Object.entries(stats)) {
-            let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
-            if (channel) {
-                await channel.setName(name).catch(console.error);
-            }
-        }
-    }
-    
-    // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
-    client.on("guildMemberAdd", async (member) => updateStats(member.guild));
-    client.on("guildMemberRemove", async (member) => updateStats(member.guild));
 });
 
 client.login(process.env.TOKEN);
