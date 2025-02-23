@@ -5,6 +5,7 @@ import {
 } from 'discord.js';
 import 'dotenv/config';
 import mongoose from 'mongoose';
+import Economy from './models/economy.js';
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
@@ -134,6 +135,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
 
+    // economy commands
     if (interaction.commandName === 'balance') {
         let user = await Economy.findOne({ userId: interaction.user.id });
 
