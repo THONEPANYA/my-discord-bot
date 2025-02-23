@@ -181,6 +181,25 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
         updateStats(interaction.guild);
     }
+
+    async function updateStats(guild) {
+        const members = `👥 สมาชิก: ${guild.memberCount}`;
+        const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
+        const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
+    
+        const stats = { members, textChannels, voiceChannels };
+    
+        for (const [key, name] of Object.entries(stats)) {
+            let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
+            if (channel) {
+                await channel.setName(name).catch(console.error);
+            }
+        }
+    }
+    
+    // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
+    client.on("guildMemberAdd", async (member) => updateStats(member.guild));
+    client.on("guildMemberRemove", async (member) => updateStats(member.guild));
 });
 
 client.login(process.env.TOKEN);
