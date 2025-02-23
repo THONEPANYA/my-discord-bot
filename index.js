@@ -6,7 +6,6 @@ import {
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import Economy from './models/economy.js';
-const Economy = require('./models/economy.js');
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
@@ -146,47 +145,6 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         await interaction.reply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
-    }
-});
-
-// ✅ ฟังก์ชันอัปเดตข้อมูล Server Stats แบบเรียลไทม์
-async function updateStats(guild) {
-    const members = `👥 สมาชิก: ${guild.memberCount}`;
-    const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
-    const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
-
-    const stats = { members, textChannels, voiceChannels };
-
-    for (const [key, name] of Object.entries(stats)) {
-        let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
-        if (channel) {
-            await channel.setName(name).catch(console.error);
-        }
-    }
-}
-
-client.on("guildMemberAdd", async (member) => updateStats(member.guild));
-client.on("guildMemberRemove", async (member) => updateStats(member.guild));
-
-// ✅ คำสั่ง `/setupstats` ตั้งค่าห้องสถิติ Server
-client.on('interactionCreate', async (interaction) => {
-    if (interaction.commandName === 'setupstats') {
-        await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
-
-        let statsCategory = interaction.guild.channels.cache.find(
-            ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory
-        );
-
-        if (!statsCategory) {
-            statsCategory = await interaction.guild.channels.create({
-                name: "📊 Server Stats",
-                type: ChannelType.GuildCategory,
-                position: 0
-            });
-        }
-
-        await updateStats(interaction.guild);
-        await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
     }
 });
 
