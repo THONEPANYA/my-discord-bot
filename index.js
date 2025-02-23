@@ -9,7 +9,10 @@ import Economy from './models/economy.js';
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const economyCommandsPath = path.join(__dirname, 'commands/economy');
 const economyCommandFiles = fs.readdirSync(economyCommandsPath).filter(file => file.endsWith('.js'));
@@ -80,25 +83,13 @@ const commands = [
 await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
 console.log("✅ ลงทะเบียน Slash Commands สำเร็จ!");
 
-// ✅ ฟังก์ชันลงทะเบียน Slash Commands
-async function registerCommands() {
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-    try {
-        console.log("📌 กำลังลงทะเบียน Slash Commands...");
-        await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-        console.log("✅ ลงทะเบียน Slash Commands สำเร็จ!");
-    } catch (error) {
-        console.error("❌ ลงทะเบียน Slash Commands ล้มเหลว:", error);
-    }
-}
-
 // ✅ เมื่อบอทพร้อมทำงาน
 client.once('ready', async () => {
     console.log(`✅ บอท ${client.user.tag} พร้อมใช้งานแล้ว!`);
     await registerCommands();
 });
 
-// ✅ ระบบยืนยันตัวตน
+// ✅ ระบบยืนยันตัวตนพร้อมให้ยศ
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand() && !interaction.isButton()) return;
 
@@ -110,57 +101,34 @@ client.on('interactionCreate', async (interaction) => {
                 type: ChannelType.GuildText
             });
         }
-
         const verifyRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("start_verification")
                 .setLabel("🔍 ยืนยันตัวตน")
                 .setStyle(ButtonStyle.Primary)
         );
-
         await verifyChannel.send({
             content: "**👋 กรุณากดยืนยันตัวตนเพื่อรับยศ**",
             components: [verifyRow]
         });
-
         await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
     }
 
     if (interaction.isButton() && interaction.customId === "start_verification") {
-        const roleName = "สมาชิก";
-        const role = interaction.guild.roles.cache.find(r => r.name === roleName);
-
+        let role = interaction.guild.roles.cache.find(r => r.name === "สมาชิก");
         if (!role) {
-            return await interaction.reply({ content: "❌ ไม่พบยศ 'สมาชิก' ในเซิร์ฟเวอร์! โปรดสร้างยศนี้ก่อน.", ephemeral: true });
+            role = await interaction.guild.roles.create({
+                name: "สมาชิก",
+                color: "BLUE",
+                reason: "สร้างยศสำหรับระบบยืนยันตัวตน"
+            });
         }
-
         const member = await interaction.guild.members.fetch(interaction.user.id);
-        if (!member) {
-            return await interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
-        }
-
         if (member.roles.cache.has(role.id)) {
             return await interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
         }
-
-        await member.roles.add(role).catch(err => {
-            console.error("❌ ไม่สามารถให้ยศได้:", err);
-            return interaction.reply({ content: "❌ บอทไม่มีสิทธิ์ให้ยศ! โปรดตรวจสอบสิทธิ์ของบอท.", ephemeral: true });
-        });
-
+        await member.roles.add(role);
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
-    }
-
-    // economy commands
-    if (interaction.commandName === 'balance') {
-        let user = await Economy.findOne({ userId: interaction.user.id });
-
-        if (!user) {
-            user = new Economy({ userId: interaction.user.id });
-            await user.save();
-        }
-
-        await interaction.reply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
     }
 });
 
