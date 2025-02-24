@@ -36,7 +36,7 @@ const commands = [
         .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
     new SlashCommandBuilder()
-        .setName('setupstats')
+        .setName('stats')
         .setDescription('📊 ตั้งค่าห้อง Server Stats')
         .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
@@ -141,8 +141,12 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
+});
 
-    if (interaction.commandName === 'setupstats') {
+client.on('interactionCreate', async (interaction)) => {
+    if (!interaction.inCommand() && !interaction.isButton()) return;
+
+    if (interaction.commandName === 'stats') {
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
 
         let statsCategory = interaction.guild.channels.cache.find(
@@ -200,6 +204,7 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
     client.on("guildMemberAdd", async (member) => updateStats(member.guild));
     client.on("guildMemberRemove", async (member) => updateStats(member.guild));
-});
+
+}
 
 client.login(process.env.TOKEN);
