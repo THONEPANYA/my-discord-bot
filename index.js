@@ -5,6 +5,7 @@ import {
 } from 'discord.js';
 import 'dotenv/config';
 
+import Economy from './models/economy.js';
 import mongoose from 'mongoose';
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
