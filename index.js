@@ -490,78 +490,91 @@ client.on('interactionCreate', async (interaction) => {
 
     // ✅ Slot Machine
     if (interaction.commandName === 'slot') {
-        await interaction.deferReply({ ephemeral: false });
-    
-        const amount = interaction.options.getInteger('amount');
-        const fruits = ["🍎", "🍊", "🍇", "🍉", "🍒", "⭐"];  
-    
-        if (amount <= 0) {
-            return interaction.editReply({ content: "❌ คุณต้องเดิมพันมากกว่า 0 🪙!", ephemeral: true });
-        }
+        await interaction.deferReply();  // ✅ บอทแจ้งว่ากำลังทำงาน
     
         let user = await Economy.findOne({ userId: interaction.user.id });
-        if (!user || user.wallet < amount) {
-            return interaction.editReply({ content: "❌ คุณมีเงินไม่พอสำหรับการเดิมพัน!", ephemeral: true });
+        if (!user || user.wallet < 100) {
+            return interaction.editReply("❌ คุณต้องมีอย่างน้อย **100 🪙** เพื่อเล่นสล็อต!");
         }
     
-        // 🎰 สุ่มผลลัพธ์สล็อต 3 ช่อง (ค่าจริง)
-        const finalSlots = [
-            fruits[Math.floor(Math.random() * fruits.length)],
-            fruits[Math.floor(Math.random() * fruits.length)],
-            fruits[Math.floor(Math.random() * fruits.length)]
-        ];
+        const betAmount = 100; // ค่าเดิมพันตายตัว
+        user.wallet -= betAmount;
+        
+        const symbols = ["🍒", "🍊", "⭐", "🍉", "🔔", "💎"];
+        let slotResult = [];
     
-        // 🎰 สร้างเอฟเฟกต์การหมุน
-        let frames = [];
-        for (let i = 0; i < 10; i++) {  // หมุน 10 รอบ
-            frames.push([
-                fruits[Math.floor(Math.random() * fruits.length)],
-                fruits[Math.floor(Math.random() * fruits.length)],
-                fruits[Math.floor(Math.random() * fruits.length)]
-            ]);
-        }
-        frames.push(finalSlots); // ใส่ผลลัพธ์สุดท้ายลงไป
-    
-        // แสดงแอนิเมชันสล็อตทีละเฟรม
-        let frameIndex = 0;
-        const slotAnimation = async () => {
-            if (frameIndex < frames.length) {
-                await interaction.editReply({
-                    content: `🎰 | **${frames[frameIndex][0]} | ${frames[frameIndex][1]} | ${frames[frameIndex][2]}** |\n⏳ หมุนสล็อต...`,
-                    ephemeral: true
-                });
-                frameIndex++;
-                setTimeout(slotAnimation, 500); // หน่วงเวลา 500ms แล้วแสดงเฟรมถัดไป
-            } else {
-                // 🎰 แสดงผลลัพธ์สุดท้าย
-                let resultMessage = `🎰 | **${finalSlots[0]} | ${finalSlots[1]} | ${finalSlots[2]}** |\n`;
-    
-                let multiplier = 1;
-                if (finalSlots[0] === finalSlots[1] && finalSlots[1] === finalSlots[2]) {
-                    // ชนะ 5 เท่าถ้าทั้ง 3 ช่องเหมือนกัน
-                    multiplier = finalSlots[0] === "⭐" ? 10 : 5;
-                    user.wallet += amount * multiplier;
-                    resultMessage += `🎉 แจ็คพอต! คุณชนะ **${amount * multiplier}** 🪙! 🎆✨`;
-                } else if (finalSlots[0] === finalSlots[1] || finalSlots[1] === finalSlots[2] || finalSlots[0] === finalSlots[2]) {
-                    user.wallet += amount;
-                    resultMessage += `😊 คุณได้คืนเงิน **${amount}** 🪙! 🎵🎶`;
-                } else {
-                    user.wallet -= amount;
-                    resultMessage += `😢 คุณแพ้และเสีย **${amount}** 🪙! 🎭`;
-                }
-    
-                await user.save();
-                await interaction.editReply({ content: resultMessage, ephemeral: true });
-            }
+        // 🌀 **กำหนดโอกาสชนะ-แพ้**
+        const odds = {
+            jackpot: 0.05,  // 🎰 แจ็คพอต (5%)
+            twoMatch: 0.35, // 🎖️ ได้ 2 ตัวเหมือนกัน (35%)
+            lose: 0.60      // 😢 แพ้ (60%)
         };
     
-        slotAnimation(); // เริ่มต้นการหมุน
+        let winType = "lose";
+        let jackpotRoll = Math.random();
+        let twoMatchRoll = Math.random();
+    
+        if (jackpotRoll < odds.jackpot) {
+            winType = "jackpot"; // แจ็คพอต
+        } else if (twoMatchRoll < odds.twoMatch) {
+            winType = "twoMatch"; // ได้ 2 ตัวตรงกัน
+        }
+    
+        // 🌀 **สร้างผลลัพธ์ที่เหมาะสมกับโอกาสที่สุ่มได้**
+        if (winType === "jackpot") {
+            let luckySymbol = symbols[Math.floor(Math.random() * symbols.length)];
+            slotResult = [luckySymbol, luckySymbol, luckySymbol];
+        } else if (winType === "twoMatch") {
+            let luckySymbol = symbols[Math.floor(Math.random() * symbols.length)];
+            let otherSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+            slotResult = Math.random() < 0.5 ? [luckySymbol, luckySymbol, otherSymbol] : [luckySymbol, otherSymbol, luckySymbol];
+        } else {
+            slotResult = [
+                symbols[Math.floor(Math.random() * symbols.length)],
+                symbols[Math.floor(Math.random() * symbols.length)],
+                symbols[Math.floor(Math.random() * symbols.length)]
+            ];
+        }
+    
+        // 🎯 คำนวณรางวัล
+        let winAmount = 0;
+        let message = "";
+    
+        if (winType === "jackpot") {
+            winAmount = betAmount * 10;
+            message = `🎰 **JACKPOT!** 🎰\n💎 คุณชนะ **${winAmount} 🪙**! 🎉`;
+        } else if (winType === "twoMatch") {
+            winAmount = betAmount * 2;
+            message = `✨ คุณชนะ **${winAmount} 🪙**!`;
+        } else {
+            message = `😢 คุณแพ้และเสีย ${betAmount} 🪙... (ลองใหม่อีกครั้ง!)`;
+        }
+    
+        user.wallet += winAmount;
+        await user.save();
+    
+        // 🎰 **อนิเมชันสล็อตหมุน**
+        let slotAnimation = [
+            `🎰 | ⏳ ⏳ ⏳`,
+            `🎰 | ${symbols[Math.floor(Math.random() * symbols.length)]} ⏳ ⏳`,
+            `🎰 | ${symbols[Math.floor(Math.random() * symbols.length)]} ${symbols[Math.floor(Math.random() * symbols.length)]} ⏳`,
+            `🎰 | ${slotResult[0]} ${slotResult[1]} ${slotResult[2]}`
+        ];
+    
+        for (let i = 0; i < slotAnimation.length; i++) {
+            await interaction.editReply(slotAnimation[i]);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // ⏳ หน่วงเวลาให้ดูเหมือนหมุนจริงๆ
+        }
+    
+        // 🎯 **แสดงผลลัพธ์สุดท้าย**
+        await interaction.editReply(`${slotAnimation[slotAnimation.length - 1]}\n${message}`);
     }
+    
     
     // ✅ ทำงานเพื่อรับเงิน
     // ✅ ระบบทำงาน /work
     if (interaction.commandName === 'work') {
-        await interaction.deferReply({});  // ป้องกัน "Unknown interaction"
+        await interaction.deferReply({ ephemeral: true });  // ✅ ทำให้ข้อความเห็นแค่คนใช้คำสั่ง
     
         let user = await Economy.findOne({ userId: interaction.user.id });
         if (!user) {
@@ -576,7 +589,7 @@ client.on('interactionCreate', async (interaction) => {
             const minutes = Math.floor(remainingTime / (1000 * 60));
             const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
     
-            return interaction.editReply({ephemeral: true} `⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
+            return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
         }
     
         // ✅ โอกาส 20% ที่จะล้มเหลว
