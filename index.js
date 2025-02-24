@@ -141,11 +141,8 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
-});
 
-client.on('interactionCreate', async (interaction)) => {
-    if (!interaction.inCommand() && !interaction.isButton()) return;
-
+    // ✅ คำสั่ง /stats สำหรับตั้งค่าห้อง Server Stats ในเซิร์ฟเวอร์
     if (interaction.commandName === 'stats') {
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
 
@@ -204,7 +201,6 @@ client.on('interactionCreate', async (interaction)) => {
     // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
     client.on("guildMemberAdd", async (member) => updateStats(member.guild));
     client.on("guildMemberRemove", async (member) => updateStats(member.guild));
-
-}
+});
 
 client.login(process.env.TOKEN);
