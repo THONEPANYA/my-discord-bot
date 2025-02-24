@@ -327,22 +327,31 @@ client.on('interactionCreate', async (interaction) => {
 
         // ✅ ดูอันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์
         if (interaction.commandName === 'leaderboard') {
-            await interaction.reply({ content: "⏳ กำลังโหลดข้อมูล...", ephemeral: true });
+            try {
+                await interaction.deferReply({ ephemeral: true });  // ✅ ป้องกัน Interaction หมดอายุ
         
-            // ดึงข้อมูลทั้งหมด และเรียงลำดับจากยอดเงินรวม (wallet + bank) มากที่สุด
-            const topUsers = await Economy.find().sort({ $expr: { $add: ["$wallet", "$bank"] } }).limit(10);
+                // ดึงข้อมูลผู้ใช้ทั้งหมด
+                const users = await Economy.find().lean(); // ✅ ใช้ `lean()` เพื่อลดเวลาโหลด
         
-            if (topUsers.length === 0) {
-                return interaction.editReply({ content: "❌ ไม่มีข้อมูลในระบบ Economy!", ephemeral: true });
+                if (users.length === 0) {
+                    return interaction.editReply({ content: "❌ ไม่มีข้อมูลในระบบ Economy!", ephemeral: true });
+                }
+        
+                // ✅ ใช้ JavaScript `.sort()` แทน `sort()` ใน Mongoose
+                const topUsers = users.sort((a, b) => (b.wallet + b.bank) - (a.wallet + a.bank)).slice(0, 10);
+        
+                let leaderboardText = "🏆 **อันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์** 🏆\n\n";
+                topUsers.forEach((user, index) => {
+                    leaderboardText += `**#${index + 1}** <@${user.userId}> - 🪙 **${user.wallet + user.bank}**\n`;
+                });
+        
+                await interaction.editReply({ content: leaderboardText, ephemeral: true });
+            } catch (error) {
+                console.error("❌ เกิดข้อผิดพลาดใน /leaderboard:", error);
+                await interaction.editReply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", ephemeral: true });
             }
-        
-            let leaderboardText = "🏆 **อันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์** 🏆\n\n";
-            topUsers.forEach((user, index) => {
-                leaderboardText += `**#${index + 1}** <@${user.userId}> - 🪙 **${user.wallet + user.bank}**\n`;
-            });
-        
-            await interaction.editReply({ content: leaderboardText, ephemeral: true });
-        }        
+        }
+             
         
         
 });
