@@ -54,6 +54,10 @@ const commands = [
         .setDescription('💵 รับเงินประจำวัน'),
 
     new SlashCommandBuilder()
+        .setName('work')
+        .setDescription('👷 ทำงานเพื่อรับเงิน'),
+
+    new SlashCommandBuilder()
         .setName('transfer')
         .setDescription('💸 โอนเงินให้สมาชิก')
         .addUserOption(option => option.setName('user').setDescription('ผู้รับเงิน').setRequired(true))
@@ -243,6 +247,36 @@ client.on('interactionCreate', async (interaction) => {
         
             await interaction.reply(`✅ **${interaction.user.username}** คุณได้รับ **500** 🪙 จากเงินประจำวัน!`);
         }
+
+        // ✅ ทำงานเพื่อรับเงิน
+        if (interaction.commandName === 'work') {
+            await interaction.deferReply();  // ✅ ป้องกัน "Unknown interaction"
+        
+            let user = await Economy.findOne({ userId: interaction.user.id });
+            if (!user) {
+                user = new Economy({ userId: interaction.user.id });
+            }
+        
+            const now = new Date();
+            const cooldown = 60 * 60 * 1000; // 1 ชั่วโมง (มิลลิวินาที)
+        
+            if (user.lastWork && now - user.lastWork < cooldown) {
+                const remainingTime = cooldown - (now - user.lastWork);
+                const minutes = Math.floor(remainingTime / (1000 * 60));
+                const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+        
+                return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
+            }
+        
+            // ✅ สุ่มเงินที่จะได้รับจากการทำงาน
+            const earnings = Math.floor(Math.random() * (500 - 100 + 1)) + 100; // รับเงิน 100 - 500 🪙
+            user.wallet += earnings;
+            user.lastWork = now;
+            await user.save();
+        
+            await interaction.editReply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
+        }
+        
     
         // ✅ โอนเงินให้สมาชิก
         if (interaction.commandName === 'transfer') {
