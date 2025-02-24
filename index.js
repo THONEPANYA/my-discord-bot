@@ -504,25 +504,33 @@ client.on('interactionCreate', async (interaction) => {
         const symbols = ["🍒", "🍊", "⭐", "🍉", "🔔", "💎"];
         let slotResult = [];
     
-        // 🌀 **กำหนดโอกาสชนะ-แพ้**
+        // 🌀 **กำหนดโอกาสชนะ**
         const odds = {
-            jackpot: 0.05,  // 🎰 แจ็คพอต (5%) → ได้เงิน 10 เท่า
-            twoMatch: 0.35, // 🎖️ ได้ 2 ตัวเหมือนกัน (35%) → ได้ 2 เท่า
-            lose: 0.60      // 😢 แพ้ (60%) → เสียเงินเดิมพัน
+            megaJackpot: 0.01,  // 🔥 Mega Jackpot (1%) → ได้ 50 เท่า
+            jackpot: 0.05,      // 🎰 แจ็คพอตปกติ (5%) → ได้ 10 เท่า
+            twoMatch: 0.35,     // 🎖️ ได้ 2 ตัวเหมือนกัน (35%) → ได้ 2 เท่า
+            freeSpin: 0.10,     // 🎟️ Free Spin (10%) → ได้หมุนฟรี
+            lose: 0.60          // 😢 แพ้ (60%) → เสียเงินเดิมพัน
         };
     
         let winType = "lose";
+        let megaJackpotRoll = Math.random();
         let jackpotRoll = Math.random();
         let twoMatchRoll = Math.random();
+        let freeSpinRoll = Math.random();
     
-        if (jackpotRoll < odds.jackpot) {
+        if (megaJackpotRoll < odds.megaJackpot) {
+            winType = "megaJackpot";
+        } else if (jackpotRoll < odds.jackpot) {
             winType = "jackpot";
         } else if (twoMatchRoll < odds.twoMatch) {
             winType = "twoMatch";
         }
     
         // 🌀 **สร้างผลลัพธ์ที่เหมาะสมกับโอกาสที่สุ่มได้**
-        if (winType === "jackpot") {
+        if (winType === "megaJackpot") {
+            slotResult = ["💎", "💎", "💎"];
+        } else if (winType === "jackpot") {
             let luckySymbol = symbols[Math.floor(Math.random() * symbols.length)];
             slotResult = [luckySymbol, luckySymbol, luckySymbol];
         } else if (winType === "twoMatch") {
@@ -541,17 +549,27 @@ client.on('interactionCreate', async (interaction) => {
         let winAmount = 0;
         let message = "";
     
-        if (winType === "jackpot") {
-            winAmount = betAmount * 10;  // ✅ ได้ 10 เท่าของเงินเดิมพัน
+        if (winType === "megaJackpot") {
+            winAmount = betAmount * 50;
+            message = `🎰 **MEGA JACKPOT!!!** 🎰\n💰 คุณชนะ **${winAmount} 🪙**! 🎆🔥`;
+        } else if (winType === "jackpot") {
+            winAmount = betAmount * 10;
             message = `🎰 **JACKPOT!** 🎰\n💎 คุณชนะ **${winAmount} 🪙**! 🎉`;
         } else if (winType === "twoMatch") {
-            winAmount = betAmount * 2;  // ✅ ได้ 2 เท่าของเงินเดิมพัน
+            winAmount = betAmount * 2;
             message = `✨ คุณชนะ **${winAmount} 🪙**!`;
         } else {
             message = `😢 คุณแพ้และเสีย ${betAmount} 🪙... (ลองใหม่อีกครั้ง!)`;
         }
     
         user.wallet += winAmount;
+    
+        // 🎟️ **Free Spin Bonus**
+        if (freeSpinRoll < odds.freeSpin) {
+            user.wallet += betAmount;  // ✅ คืนเงินเดิมพัน
+            message += `\n🎟️ **คุณได้ Free Spin! หมุนฟรีอีก 1 ครั้ง!**`;
+        }
+    
         await user.save();
     
         // 🎰 **อนิเมชันสล็อตหมุน**
@@ -570,6 +588,7 @@ client.on('interactionCreate', async (interaction) => {
         // 🎯 **แสดงผลลัพธ์สุดท้าย**
         await interaction.editReply(`${slotAnimation[slotAnimation.length - 1]}\n${message}`);
     }
+    
     
     
     // ✅ ทำงานเพื่อรับเงิน
