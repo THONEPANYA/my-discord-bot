@@ -269,6 +269,7 @@ client.on('interactionCreate', async (interaction) => {
             }
         
             // ✅ สุ่มเงินที่จะได้รับจากการทำงาน
+            console.log(commands);
             const earnings = Math.floor(Math.random() * (500 - 100 + 1)) + 100; // รับเงิน 100 - 500 🪙
             user.wallet += earnings;
             user.lastWork = now;
