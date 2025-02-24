@@ -561,7 +561,7 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ ทำงานเพื่อรับเงิน
     // ✅ ระบบทำงาน /work
     if (interaction.commandName === 'work') {
-        await interaction.deferReply();  // ป้องกัน "Unknown interaction"
+        await interaction.deferReply({});  // ป้องกัน "Unknown interaction"
     
         let user = await Economy.findOne({ userId: interaction.user.id });
         if (!user) {
@@ -576,7 +576,7 @@ client.on('interactionCreate', async (interaction) => {
             const minutes = Math.floor(remainingTime / (1000 * 60));
             const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
     
-            return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
+            return interaction.editReply({ephemeral: true} `⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
         }
     
         // ✅ โอกาส 20% ที่จะล้มเหลว
