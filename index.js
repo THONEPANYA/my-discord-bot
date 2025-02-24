@@ -11,6 +11,9 @@ import mongoose from 'mongoose';
 // import economy.js
 import Economy from './models/economy.js';
 
+const user = await Economy.findOne({ userId: 'YOUR_DISCORD_USER_ID' });
+console.log(user);
+
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
 mongoose.connect(process.env.MONGO_URI)
@@ -215,7 +218,7 @@ client.on('interactionCreate', async (interaction) => {
     
         // ✅ เช็คยอดเงิน
         if (interaction.commandName === 'balance') {
-            await interaction.deferReply({ ephemeral: true });  // ✅ บอทแจ้งว่ากำลังทำงาน
+            await interaction.deferReply();  // ✅ ป้องกัน "Unknown interaction"
             
             let user = await Economy.findOne({ userId: interaction.user.id });
             if (!user) {
@@ -224,7 +227,7 @@ client.on('interactionCreate', async (interaction) => {
             }
         
             await interaction.editReply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
-        }        
+        }              
     
         // ✅ รับเงินประจำวัน
         if (interaction.commandName === 'daily') {
