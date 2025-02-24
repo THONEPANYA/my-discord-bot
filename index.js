@@ -490,24 +490,25 @@ client.on('interactionCreate', async (interaction) => {
 
     // ✅ Slot Machine
     if (interaction.commandName === 'slot') {
-        await interaction.deferReply();  // ✅ บอทแจ้งว่ากำลังทำงาน
+        await interaction.deferReply();  // ✅ ป้องกัน Unknown interaction
     
         let user = await Economy.findOne({ userId: interaction.user.id });
-        if (!user || user.wallet < 100) {
-            return interaction.editReply("❌ คุณต้องมีอย่างน้อย **100 🪙** เพื่อเล่นสล็อต!");
+        const betAmount = interaction.options.getInteger('amount');
+    
+        if (!user || user.wallet < betAmount || betAmount < 100) {
+            return interaction.editReply("❌ คุณต้องเดิมพันอย่างน้อย **100 🪙** และต้องมีเงินเพียงพอ!");
         }
     
-        const betAmount = 100; // ค่าเดิมพันตายตัว
-        user.wallet -= betAmount;
-        
+        user.wallet -= betAmount;  // หักเงินเดิมพันออกก่อนหมุน
+    
         const symbols = ["🍒", "🍊", "⭐", "🍉", "🔔", "💎"];
         let slotResult = [];
     
         // 🌀 **กำหนดโอกาสชนะ-แพ้**
         const odds = {
-            jackpot: 0.05,  // 🎰 แจ็คพอต (5%)
-            twoMatch: 0.35, // 🎖️ ได้ 2 ตัวเหมือนกัน (35%)
-            lose: 0.60      // 😢 แพ้ (60%)
+            jackpot: 0.05,  // 🎰 แจ็คพอต (5%) → ได้เงิน 10 เท่า
+            twoMatch: 0.35, // 🎖️ ได้ 2 ตัวเหมือนกัน (35%) → ได้ 2 เท่า
+            lose: 0.60      // 😢 แพ้ (60%) → เสียเงินเดิมพัน
         };
     
         let winType = "lose";
@@ -515,9 +516,9 @@ client.on('interactionCreate', async (interaction) => {
         let twoMatchRoll = Math.random();
     
         if (jackpotRoll < odds.jackpot) {
-            winType = "jackpot"; // แจ็คพอต
+            winType = "jackpot";
         } else if (twoMatchRoll < odds.twoMatch) {
-            winType = "twoMatch"; // ได้ 2 ตัวตรงกัน
+            winType = "twoMatch";
         }
     
         // 🌀 **สร้างผลลัพธ์ที่เหมาะสมกับโอกาสที่สุ่มได้**
@@ -536,15 +537,15 @@ client.on('interactionCreate', async (interaction) => {
             ];
         }
     
-        // 🎯 คำนวณรางวัล
+        // 🎯 คำนวณรางวัล (สเกลตามเงินเดิมพัน)
         let winAmount = 0;
         let message = "";
     
         if (winType === "jackpot") {
-            winAmount = betAmount * 10;
+            winAmount = betAmount * 10;  // ✅ ได้ 10 เท่าของเงินเดิมพัน
             message = `🎰 **JACKPOT!** 🎰\n💎 คุณชนะ **${winAmount} 🪙**! 🎉`;
         } else if (winType === "twoMatch") {
-            winAmount = betAmount * 2;
+            winAmount = betAmount * 2;  // ✅ ได้ 2 เท่าของเงินเดิมพัน
             message = `✨ คุณชนะ **${winAmount} 🪙**!`;
         } else {
             message = `😢 คุณแพ้และเสีย ${betAmount} 🪙... (ลองใหม่อีกครั้ง!)`;
