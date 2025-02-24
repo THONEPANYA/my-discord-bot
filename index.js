@@ -560,36 +560,49 @@ client.on('interactionCreate', async (interaction) => {
     
     // ✅ ทำงานเพื่อรับเงิน
     // ✅ ระบบทำงาน /work
-if (interaction.commandName === 'work') {
-    await interaction.deferReply({ ephemeral: true });
-
-    let user = await Economy.findOne({ userId: interaction.user.id });
-    if (!user) {
-        user = new Economy({ userId: interaction.user.id });
+    if (interaction.commandName === 'work') {
+        await interaction.deferReply();  // ป้องกัน "Unknown interaction"
+    
+        let user = await Economy.findOne({ userId: interaction.user.id });
+        if (!user) {
+            user = new Economy({ userId: interaction.user.id });
+        }
+    
+        const now = new Date();
+        const cooldown = 60 * 60 * 1000; // 1 ชั่วโมง (มิลลิวินาที)
+    
+        if (user.lastWork && now - user.lastWork < cooldown) {
+            const remainingTime = cooldown - (now - user.lastWork);
+            const minutes = Math.floor(remainingTime / (1000 * 60));
+            const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+    
+            return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
+        }
+    
+        // ✅ โอกาส 20% ที่จะล้มเหลว
+        const failChance = Math.random();
+        if (failChance < 0.2) {
+            return interaction.editReply(`❌ คุณทำงานพลาดครั้งนี้! ลองใหม่อีกครั้งในภายหลัง.`);
+        }
+    
+        // ✅ คำนวณเงินที่ได้รับ
+        let earnings = Math.floor(Math.random() * (500 - 100 + 1)) + 100; // 100 - 500 🪙
+    
+        // ✅ โอกาส 10% ได้โบนัสพิเศษ
+        const bonusChance = Math.random();
+        let bonusText = "";
+        if (bonusChance < 0.1) {
+            earnings *= 2;  // ได้เงิน 2 เท่า
+            bonusText = "🎉 **โบนัสพิเศษ! ได้เงินเพิ่ม 2 เท่า!** 🎉\n";
+        }
+    
+        user.wallet += earnings;
+        user.lastWork = now;
+        await user.save();
+    
+        await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
-
-    const now = new Date();
-    const cooldown = 60 * 60 * 1000; // 1 ชั่วโมง
-
-    if (user.lastWork && now - user.lastWork < cooldown) {
-        const remainingTime = cooldown - (now - user.lastWork);
-        const minutes = Math.floor(remainingTime / (1000 * 60));
-        const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
-
-        return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
-    }
-
-    // ✅ สุ่มงาน + รายได้
-    const jobs = ["พนักงานร้านกาแฟ ☕", "ช่างไฟฟ้า ⚡", "นักเขียน ✍", "นักพัฒนา 💻"];
-    const selectedJob = jobs[Math.floor(Math.random() * jobs.length)];
-    const earnings = Math.floor(Math.random() * (500 - 100 + 1)) + 100; // 100 - 500 🪙
-
-    user.wallet += earnings;
-    user.lastWork = now;
-    await user.save();
-
-    await interaction.editReply(`💼 คุณทำงานเป็น **${selectedJob}** และได้รับ **${earnings}** 🪙!`);
-}
+    
 
     
         
