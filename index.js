@@ -210,19 +210,21 @@ client.on('interactionCreate', async (interaction) => {
 
         // ✅ เช็คยอดเงิน
         if (interaction.commandName === 'balance') {
-            await interaction.deferReply();  // ✅ ป้องกัน Unknown interaction
-            
+            await interaction.deferReply({ ephemeral: true });  // ✅ บอทแจ้งว่าแสดงให้เฉพาะคนใช้คำสั่ง
+        
             let user = await Economy.findOne({ userId: interaction.user.id });
             if (!user) {
                 user = new Economy({ userId: interaction.user.id });
                 await user.save();
             }
         
-            await interaction.editReply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
+            await interaction.editReply({ content: `💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`, ephemeral: true });
         }
     
         // ✅ รับเงินประจำวัน
         if (interaction.commandName === 'daily') {
+            await interaction.deferReply({ ephemeral: true });
+        
             let user = await Economy.findOne({ userId: interaction.user.id });
         
             if (!user) {
@@ -237,107 +239,87 @@ client.on('interactionCreate', async (interaction) => {
                 const hours = Math.floor(remainingTime / (1000 * 60 * 60));
                 const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
         
-                return interaction.reply(`⏳ คุณสามารถรับเงินประจำวันได้อีกครั้งใน **${hours} ชั่วโมง ${minutes} นาที**`, { flags: 64 });
+                return interaction.editReply({ content: `⏳ คุณสามารถรับเงินประจำวันได้อีกครั้งใน **${hours} ชั่วโมง ${minutes} นาที**`, ephemeral: true });
             }
         
-            // ✅ ถ้าผ่าน Cooldown สามารถรับเงินได้
             user.wallet += 500;
             user.lastDaily = now;
             await user.save();
         
-            await interaction.reply(`✅ **${interaction.user.username}** คุณได้รับ **500** 🪙 จากเงินประจำวัน!`);
+            await interaction.editReply({ content: `✅ **${interaction.user.username}** คุณได้รับ **500** 🪙 จากเงินประจำวัน!`, ephemeral: true });
         }
+        
 
-        // ✅ ทำงานเพื่อรับเงิน
-        if (interaction.commandName === 'work') {
-            await interaction.deferReply();  // ✅ ป้องกัน "Unknown interaction"
-        
-            let user = await Economy.findOne({ userId: interaction.user.id });
-            if (!user) {
-                user = new Economy({ userId: interaction.user.id });
-            }
-        
-            const now = new Date();
-            const cooldown = 60 * 60 * 1000; // 1 ชั่วโมง (มิลลิวินาที)
-        
-            if (user.lastWork && now - user.lastWork < cooldown) {
-                const remainingTime = cooldown - (now - user.lastWork);
-                const minutes = Math.floor(remainingTime / (1000 * 60));
-                const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
-        
-                return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
-            }
-        
-            // ✅ สุ่มเงินที่จะได้รับจากการทำงาน
-            console.log(commands);
-            const earnings = Math.floor(Math.random() * (500 - 100 + 1)) + 100; // รับเงิน 100 - 500 🪙
-            user.wallet += earnings;
-            user.lastWork = now;
-            await user.save();
-        
-            await interaction.editReply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
-        }
     
         // ✅ โอนเงินให้สมาชิก
         if (interaction.commandName === 'transfer') {
+            await interaction.deferReply({ ephemeral: true });
+        
             const targetUser = interaction.options.getUser('user');
             const amount = interaction.options.getInteger('amount');
-    
+        
             if (!targetUser || targetUser.id === interaction.user.id) {
-                return interaction.reply("❌ ไม่สามารถโอนเงินให้ตัวเองได้!", { flags: 64 });
+                return interaction.editReply({ content: "❌ ไม่สามารถโอนเงินให้ตัวเองได้!", ephemeral: true });
             }
-    
+        
             let sender = await Economy.findOne({ userId: interaction.user.id });
             let receiver = await Economy.findOne({ userId: targetUser.id });
-    
+        
             if (!sender || sender.wallet < amount) {
-                return interaction.reply("❌ คุณมีเงินไม่เพียงพอ!", { flags: 64 });
+                return interaction.editReply({ content: "❌ คุณมีเงินไม่เพียงพอ!", ephemeral: true });
             }
-    
+        
             if (!receiver) {
                 receiver = new Economy({ userId: targetUser.id });
             }
-    
+        
             sender.wallet -= amount;
             receiver.wallet += amount;
-    
+        
             await sender.save();
             await receiver.save();
-    
-            await interaction.reply(`✅ **${interaction.user.username}** ได้โอน **${amount}** 🪙 ให้ **${targetUser.username}**`);
+        
+            await interaction.editReply({ content: `✅ **${interaction.user.username}** ได้โอน **${amount}** 🪙 ให้ **${targetUser.username}**`, ephemeral: true });
         }
+        
     
         // ✅ ฝากเงินเข้าธนาคาร
         if (interaction.commandName === 'deposit') {
+            await interaction.deferReply({ ephemeral: true });
+        
             const amount = interaction.options.getInteger('amount');
             let user = await Economy.findOne({ userId: interaction.user.id });
-    
+        
             if (!user || user.wallet < amount) {
-                return interaction.reply("❌ คุณมีเงินไม่พอในกระเป๋า!", { flags: 64 });
+                return interaction.editReply({ content: "❌ คุณมีเงินไม่พอในกระเป๋า!", ephemeral: true });
             }
-    
+        
             user.wallet -= amount;
             user.bank += amount;
             await user.save();
-    
-            await interaction.reply(`✅ คุณฝากเงิน **${amount}** 🪙 เข้าไปในธนาคารแล้ว!`);
+        
+            await interaction.editReply({ content: `✅ คุณฝากเงิน **${amount}** 🪙 เข้าไปในธนาคารแล้ว!`, ephemeral: true });
         }
+        
     
         // ✅ ถอนเงินจากธนาคาร
         if (interaction.commandName === 'withdraw') {
+            await interaction.deferReply({ ephemeral: true });
+        
             const amount = interaction.options.getInteger('amount');
             let user = await Economy.findOne({ userId: interaction.user.id });
-    
+        
             if (!user || user.bank < amount) {
-                return interaction.reply("❌ คุณมีเงินไม่พอในธนาคาร!", { flags: 64 });
+                return interaction.editReply({ content: "❌ คุณมีเงินไม่พอในธนาคาร!", ephemeral: true });
             }
-    
+        
             user.bank -= amount;
             user.wallet += amount;
             await user.save();
-    
-            await interaction.reply(`✅ คุณถอนเงิน **${amount}** 🪙 ออกจากธนาคารแล้ว!`);
+        
+            await interaction.editReply({ content: `✅ คุณถอนเงิน **${amount}** 🪙 ออกจากธนาคารแล้ว!`, ephemeral: true });
         }
+        
 });
 
 client.login(process.env.TOKEN);
