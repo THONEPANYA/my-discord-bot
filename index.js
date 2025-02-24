@@ -72,6 +72,11 @@ const commands = [
         .setName('withdraw')
         .setDescription('🏦 ถอนเงินจากธนาคาร')
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('leaderboard')
+        .setDescription('🏆 ดูอันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์'),
+
 ];
 
 const statsChannels = {};
@@ -318,6 +323,24 @@ client.on('interactionCreate', async (interaction) => {
             await user.save();
         
             await interaction.editReply({ content: `✅ คุณถอนเงิน **${amount}** 🪙 ออกจากธนาคารแล้ว!`, ephemeral: true });
+        }
+
+        if (interaction.commandName === 'leaderboard') {
+            await interaction.deferReply({ ephemeral: true });
+        
+            // ดึงข้อมูลผู้ใช้ทั้งหมดและเรียงลำดับตามยอดเงินรวม (wallet + bank)
+            const topUsers = await Economy.find().sort({ wallet: -1, bank: -1 }).limit(10);
+        
+            if (topUsers.length === 0) {
+                return interaction.editReply({ content: "❌ ไม่มีข้อมูลในระบบ Economy!", ephemeral: true });
+            }
+        
+            let leaderboardText = "🏆 **อันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์** 🏆\n\n";
+            topUsers.forEach((user, index) => {
+                leaderboardText += `**#${index + 1}** <@${user.userId}> - 🪙 **${user.wallet + user.bank}**\n`;
+            });
+        
+            await interaction.editReply({ content: leaderboardText, ephemeral: true });
         }
         
 });
