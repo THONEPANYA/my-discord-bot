@@ -5,6 +5,7 @@ import {
 } from 'discord.js';
 import 'dotenv/config';
 
+import Economy from './models/economy.js';
 import mongoose from 'mongoose';
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
@@ -53,6 +54,10 @@ const commands = [
         .setDescription('💵 รับเงินประจำวัน'),
 
     new SlashCommandBuilder()
+        .setName('work')
+        .setDescription('👷 ทำงานเพื่อรับเงิน'),
+
+    new SlashCommandBuilder()
         .setName('transfer')
         .setDescription('💸 โอนเงินให้สมาชิก')
         .addUserOption(option => option.setName('user').setDescription('ผู้รับเงิน').setRequired(true))
@@ -67,6 +72,11 @@ const commands = [
         .setName('withdraw')
         .setDescription('🏦 ถอนเงินจากธนาคาร')
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('leaderboard')
+        .setDescription('🏆 ดูอันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์'),
+
 ];
 
 const statsChannels = {};
@@ -200,6 +210,150 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
     client.on("guildMemberAdd", async (member) => updateStats(member.guild));
     client.on("guildMemberRemove", async (member) => updateStats(member.guild));
+
+
+
+        // ✅ เช็คยอดเงิน
+        if (interaction.commandName === 'balance') {
+            await interaction.deferReply({ ephemeral: true });  // ✅ บอทแจ้งว่าแสดงให้เฉพาะคนใช้คำสั่ง
+        
+            let user = await Economy.findOne({ userId: interaction.user.id });
+            if (!user) {
+                user = new Economy({ userId: interaction.user.id });
+                await user.save();
+            }
+        
+            await interaction.editReply({ content: `💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`, ephemeral: true });
+        }
+    
+        // ✅ รับเงินประจำวัน
+        if (interaction.commandName === 'daily') {
+            await interaction.deferReply({ ephemeral: true });
+        
+            let user = await Economy.findOne({ userId: interaction.user.id });
+        
+            if (!user) {
+                user = new Economy({ userId: interaction.user.id });
+            }
+        
+            const now = new Date();
+            const cooldown = 24 * 60 * 60 * 1000; // 24 ชั่วโมง (มิลลิวินาที)
+        
+            if (user.lastDaily && now - user.lastDaily < cooldown) {
+                const remainingTime = cooldown - (now - user.lastDaily);
+                const hours = Math.floor(remainingTime / (1000 * 60 * 60));
+                const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+        
+                return interaction.editReply({ content: `⏳ คุณสามารถรับเงินประจำวันได้อีกครั้งใน **${hours} ชั่วโมง ${minutes} นาที**`, ephemeral: true });
+            }
+        
+            user.wallet += 500;
+            user.lastDaily = now;
+            await user.save();
+        
+            await interaction.editReply({ content: `✅ **${interaction.user.username}** คุณได้รับ **500** 🪙 จากเงินประจำวัน!`, ephemeral: true });
+        }
+        
+
+    
+        // ✅ โอนเงินให้สมาชิก
+        if (interaction.commandName === 'transfer') {
+            await interaction.deferReply({ ephemeral: true });
+        
+            const targetUser = interaction.options.getUser('user');
+            const amount = interaction.options.getInteger('amount');
+        
+            if (!targetUser || targetUser.id === interaction.user.id) {
+                return interaction.editReply({ content: "❌ ไม่สามารถโอนเงินให้ตัวเองได้!", ephemeral: true });
+            }
+        
+            let sender = await Economy.findOne({ userId: interaction.user.id });
+            let receiver = await Economy.findOne({ userId: targetUser.id });
+        
+            if (!sender || sender.wallet < amount) {
+                return interaction.editReply({ content: "❌ คุณมีเงินไม่เพียงพอ!", ephemeral: true });
+            }
+        
+            if (!receiver) {
+                receiver = new Economy({ userId: targetUser.id });
+            }
+        
+            sender.wallet -= amount;
+            receiver.wallet += amount;
+        
+            await sender.save();
+            await receiver.save();
+        
+            await interaction.editReply({ content: `✅ **${interaction.user.username}** ได้โอน **${amount}** 🪙 ให้ **${targetUser.username}**`, ephemeral: true });
+        }
+        
+    
+        // ✅ ฝากเงินเข้าธนาคาร
+        if (interaction.commandName === 'deposit') {
+            await interaction.deferReply({ ephemeral: true });
+        
+            const amount = interaction.options.getInteger('amount');
+            let user = await Economy.findOne({ userId: interaction.user.id });
+        
+            if (!user || user.wallet < amount) {
+                return interaction.editReply({ content: "❌ คุณมีเงินไม่พอในกระเป๋า!", ephemeral: true });
+            }
+        
+            user.wallet -= amount;
+            user.bank += amount;
+            await user.save();
+        
+            await interaction.editReply({ content: `✅ คุณฝากเงิน **${amount}** 🪙 เข้าไปในธนาคารแล้ว!`, ephemeral: true });
+        }
+        
+    
+        // ✅ ถอนเงินจากธนาคาร
+        if (interaction.commandName === 'withdraw') {
+            await interaction.deferReply({ ephemeral: true });
+        
+            const amount = interaction.options.getInteger('amount');
+            let user = await Economy.findOne({ userId: interaction.user.id });
+        
+            if (!user || user.bank < amount) {
+                return interaction.editReply({ content: "❌ คุณมีเงินไม่พอในธนาคาร!", ephemeral: true });
+            }
+        
+            user.bank -= amount;
+            user.wallet += amount;
+            await user.save();
+        
+            await interaction.editReply({ content: `✅ คุณถอนเงิน **${amount}** 🪙 ออกจากธนาคารแล้ว!`, ephemeral: true });
+        }
+
+        // ✅ ดูอันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์
+        if (interaction.commandName === 'leaderboard') {
+            try {
+                await interaction.deferReply({ ephemeral: true });  // ✅ ป้องกัน Interaction หมดอายุ
+        
+                // ดึงข้อมูลผู้ใช้ทั้งหมด
+                const users = await Economy.find().lean(); // ✅ ใช้ `lean()` เพื่อลดเวลาโหลด
+        
+                if (users.length === 0) {
+                    return interaction.editReply({ content: "❌ ไม่มีข้อมูลในระบบ Economy!", ephemeral: true });
+                }
+        
+                // ✅ ใช้ JavaScript `.sort()` แทน `sort()` ใน Mongoose
+                const topUsers = users.sort((a, b) => (b.wallet + b.bank) - (a.wallet + a.bank)).slice(0, 10);
+        
+                let leaderboardText = "🏆 **อันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์** 🏆\n\n";
+                topUsers.forEach((user, index) => {
+                    leaderboardText += `**#${index + 1}** <@${user.userId}> - 🪙 **${user.wallet + user.bank}**\n`;
+                });
+        
+                await interaction.editReply({ content: leaderboardText, ephemeral: true });
+            } catch (error) {
+                console.error("❌ เกิดข้อผิดพลาดใน /leaderboard:", error);
+                await interaction.editReply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", ephemeral: true });
+            }
+        }
+             
+        
+        
 });
 
 client.login(process.env.TOKEN);
