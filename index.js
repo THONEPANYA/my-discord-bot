@@ -206,13 +206,15 @@ client.on('interactionCreate', async (interaction) => {
 
         // ✅ เช็คยอดเงิน
         if (interaction.commandName === 'balance') {
+            await interaction.deferReply();  // ✅ ป้องกัน Unknown interaction
+            
             let user = await Economy.findOne({ userId: interaction.user.id });
             if (!user) {
                 user = new Economy({ userId: interaction.user.id });
                 await user.save();
             }
-    
-            await interaction.reply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
+        
+            await interaction.editReply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
         }
     
         // ✅ รับเงินประจำวัน
