@@ -325,11 +325,12 @@ client.on('interactionCreate', async (interaction) => {
             await interaction.editReply({ content: `✅ คุณถอนเงิน **${amount}** 🪙 ออกจากธนาคารแล้ว!`, ephemeral: true });
         }
 
+        // ✅ ดูอันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์
         if (interaction.commandName === 'leaderboard') {
             await interaction.deferReply({ ephemeral: true });
         
-            // ดึงข้อมูลผู้ใช้ทั้งหมดและเรียงลำดับตามยอดเงินรวม (wallet + bank)
-            const topUsers = await Economy.find().sort({ wallet: -1, bank: -1 }).limit(10);
+            // ดึงข้อมูลทั้งหมด และเรียงลำดับจากยอดเงินรวม (wallet + bank) มากที่สุด
+            const topUsers = await Economy.find().sort({ $expr: { $add: ["$wallet", "$bank"] } }).limit(10);
         
             if (topUsers.length === 0) {
                 return interaction.editReply({ content: "❌ ไม่มีข้อมูลในระบบ Economy!", ephemeral: true });
@@ -342,6 +343,7 @@ client.on('interactionCreate', async (interaction) => {
         
             await interaction.editReply({ content: leaderboardText, ephemeral: true });
         }
+        
         
 });
 
