@@ -71,7 +71,6 @@ const commands = [
         .setName('withdraw')
         .setDescription('🏦 ถอนเงินจากธนาคาร')
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
-
     new SlashCommandBuilder()
         .setName('work')
         .setDescription('💼 ทำงานเพื่อรับเงิน'),
@@ -339,7 +338,7 @@ client.on('interactionCreate', async (interaction) => {
             await user.save();
         
             await interaction.reply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
-        }
+        }        
         
 });
 
