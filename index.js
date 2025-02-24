@@ -34,7 +34,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('setup')
         .setDescription('📌 ตั้งค่าระบบยืนยันตัวตน')
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+        .addStringOption(option => option.setName('role').setDescription('ชื่อยศสำหรับผู้ที่ยืนยันตัวตน').setRequired(false)),
 
     new SlashCommandBuilder()
         .setName('setupstats')
@@ -141,7 +141,64 @@ client.once('ready', async () => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand() && !interaction.isButton()) return;
 
+    // ✅ คำสั่ง /help
+    if (interaction.commandName === 'help') {
+        await interaction.deferReply({ ephemeral: true });
+
+        const helpMessage = `
+        📖 **คำสั่งที่สามารถใช้ได้** 📖
+        
+        🔰 **ระบบทั่วไป**
+        - \`/setup\` 📌 ตั้งค่าระบบยืนยันตัวตน
+        - \`/setupstats\` 📊 ตั้งค่าห้อง Server Stats
+        
+        💰 **ระบบเงิน Economy**
+        - \`/balance\` 💰 เช็คยอดเงินของคุณ
+        - \`/daily\` 💵 รับเงินประจำวัน
+        - \`/work\` 👷 ทำงานเพื่อรับเงิน (โอกาสพิเศษ & โบนัส!)
+        - \`/transfer <user> <amount>\` 💸 โอนเงินให้สมาชิก
+        - \`/deposit <amount>\` 🏦 ฝากเงินเข้าธนาคาร
+        - \`/withdraw <amount>\` 🏦 ถอนเงินจากธนาคาร
+        - \`/leaderboard\` 🏆 ดูอันดับผู้ที่มีเงินมากที่สุด
+
+        🎰 **เกมพนัน**
+        - \`/gamble <amount>\` 🎲 เดิมพันเงินของคุณ
+        - \`/slot <amount>\` 🎰 หมุนสล็อตแมชชีน (Mega Jackpot & Free Spin!)
+
+        ⚙️ **ระบบแอดมิน (สำหรับแอดมินเท่านั้น)**
+        - \`/setmoney <user> <amount>\` 💰 ตั้งค่าจำนวนเงินของผู้ใช้
+        - \`/addmoney <user> <amount>\` 💰 เพิ่มจำนวนเงินให้ผู้ใช้
+        - \`/removemoney <user> <amount>\` 💰 หักเงินจากผู้ใช้
+
+        ⚡ **หมายเหตุ**  
+        - คำสั่งที่มี 🏦 ใช้กับระบบธนาคาร  
+        - คำสั่งที่มี 🎰 ใช้กับเกม  
+        - คำสั่งที่มี 🔰 ใช้กับระบบเซิร์ฟเวอร์  
+        - **บอทนี้ใช้ MongoDB ในการเก็บข้อมูล Economy**  
+
+        หากมีปัญหาการใช้งาน ติดต่อแอดมินเซิร์ฟเวอร์! 📩
+        `;
+
+        await interaction.editReply({ content: helpMessage, ephemeral: true });
+    }
+
     if (interaction.commandName === 'setup') {
+        const subcommand = interaction.options.getSubcommand(false);
+    
+        if (subcommand === 'remove') {
+            // ค้นหาห้อง "🔰︱ยืนยันตัวตน"
+            let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
+    
+            if (!verifyChannel) {
+                return interaction.reply({ content: "❌ ไม่พบห้องยืนยันตัวตน!", ephemeral: true });
+            }
+    
+            // ลบห้องยืนยันตัวตน
+            await verifyChannel.delete();
+            return interaction.reply({ content: "✅ ห้องยืนยันตัวตนถูกลบเรียบร้อย!", ephemeral: true });
+        }
+    
+        // ✅ ถ้าไม่ได้ใช้ `/setup remove` → สร้างห้องยืนยันตัวตน
         let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
         if (!verifyChannel) {
             verifyChannel = await interaction.guild.channels.create({
@@ -149,46 +206,48 @@ client.on('interactionCreate', async (interaction) => {
                 type: ChannelType.GuildText
             });
         }
-
+    
         const verifyRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("start_verification")
                 .setLabel("🔍 ยืนยันตัวตน")
                 .setStyle(ButtonStyle.Primary)
         );
-
+    
         await verifyChannel.send({
             content: "**👋 กรุณากดยืนยันตัวตนเพื่อรับยศ**",
             components: [verifyRow]
         });
-
+    
         await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
     }
-
+    
+    // ✅ ระบบยืนยันตัวตนเมื่อกดปุ่ม
     if (interaction.isButton() && interaction.customId === "start_verification") {
         const roleName = "สมาชิก";
         const role = interaction.guild.roles.cache.find(r => r.name === roleName);
-
+    
         if (!role) {
             return await interaction.reply({ content: "❌ ไม่พบยศ 'สมาชิก' ในเซิร์ฟเวอร์! โปรดสร้างยศนี้ก่อน.", ephemeral: true });
         }
-
+    
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member) {
             return await interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
         }
-
+    
         if (member.roles.cache.has(role.id)) {
             return await interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
         }
-
+    
         await member.roles.add(role).catch(err => {
             console.error("❌ ไม่สามารถให้ยศได้:", err);
             return interaction.reply({ content: "❌ บอทไม่มีสิทธิ์ให้ยศ! โปรดตรวจสอบสิทธิ์ของบอท.", ephemeral: true });
         });
-
+    
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
+    
 
     if (interaction.commandName === 'setupstats') {
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
