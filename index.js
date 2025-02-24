@@ -183,57 +183,54 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     // ✅ ระบบยืนยันตัวตน
-    client.on('interactionCreate', async (interaction) => {
-        if (!interaction.isCommand() && !interaction.isButton()) return;
-    
-        if (interaction.commandName === 'setup') {
-            let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
-            if (!verifyChannel) {
-                verifyChannel = await interaction.guild.channels.create({
-                    name: "🔰︱ยืนยันตัวตน",
-                    type: ChannelType.GuildText
-                });
-            }
-    
-            const verifyRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("start_verification")
-                    .setLabel("🔍 ยืนยันตัวตน")
-                    .setStyle(ButtonStyle.Primary)
-            );
-    
-            await verifyChannel.send({
-                content: "**👋 กรุณากดยืนยันตัวตนเพื่อรับยศ**",
-                components: [verifyRow]
+    if (interaction.commandName === 'setup') {
+        let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
+        if (!verifyChannel) {
+            verifyChannel = await interaction.guild.channels.create({
+                name: "🔰︱ยืนยันตัวตน",
+                type: ChannelType.GuildText
             });
-    
-            await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
         }
-    
-        if (interaction.isButton() && interaction.customId === "start_verification") {
-            const roleName = "สมาชิก";
-            const role = interaction.guild.roles.cache.find(r => r.name === roleName);
-    
-            if (!role) {
-                return await interaction.reply({ content: "❌ ไม่พบยศ 'สมาชิก' ในเซิร์ฟเวอร์! โปรดสร้างยศนี้ก่อน.", ephemeral: true });
-            }
-    
-            const member = await interaction.guild.members.fetch(interaction.user.id);
-            if (!member) {
-                return await interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
-            }
-    
-            if (member.roles.cache.has(role.id)) {
-                return await interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
-            }
-    
-            await member.roles.add(role).catch(err => {
-                console.error("❌ ไม่สามารถให้ยศได้:", err);
-                return interaction.reply({ content: "❌ บอทไม่มีสิทธิ์ให้ยศ! โปรดตรวจสอบสิทธิ์ของบอท.", ephemeral: true });
-            });
-    
-            await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
+
+        const verifyRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("start_verification")
+                .setLabel("🔍 ยืนยันตัวตน")
+                .setStyle(ButtonStyle.Primary)
+        );
+
+        await verifyChannel.send({
+            content: "**👋 กรุณากดยืนยันตัวตนเพื่อรับยศ**",
+            components: [verifyRow]
+        });
+
+        await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
+    }
+
+    if (interaction.isButton() && interaction.customId === "start_verification") {
+        const roleName = "สมาชิก";
+        const role = interaction.guild.roles.cache.find(r => r.name === roleName);
+
+        if (!role) {
+            return await interaction.reply({ content: "❌ ไม่พบยศ 'สมาชิก' ในเซิร์ฟเวอร์! โปรดสร้างยศนี้ก่อน.", ephemeral: true });
         }
+
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+        if (!member) {
+            return await interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
+        }
+
+        if (member.roles.cache.has(role.id)) {
+            return await interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
+        }
+
+        await member.roles.add(role).catch(err => {
+            console.error("❌ ไม่สามารถให้ยศได้:", err);
+            return interaction.reply({ content: "❌ บอทไม่มีสิทธิ์ให้ยศ! โปรดตรวจสอบสิทธิ์ของบอท.", ephemeral: true });
+        });
+
+        await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
+    }
     
     
     // ✅ ตั้งค่าห้อง Server Stats
