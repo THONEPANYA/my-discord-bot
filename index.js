@@ -137,7 +137,7 @@ client.once('ready', async () => {
     await registerCommands();
 });
 
-// ✅ ระบบยืนยันตัวตน
+
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand() && !interaction.isButton()) return;
 
@@ -182,23 +182,30 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply({ content: helpMessage, ephemeral: true });
     }
 
+    // ✅ ระบบยืนยันตัวตน
     if (interaction.commandName === 'setup') {
+        if (!interaction.guild) {
+            return interaction.reply({ content: "❌ คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์เท่านั้น!", ephemeral: true });
+        }
+    
+        await interaction.deferReply({ ephemeral: true });
+    
         const subcommand = interaction.options.getSubcommand(false);
     
         if (subcommand === 'remove') {
-            // ค้นหาห้อง "🔰︱ยืนยันตัวตน"
             let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
     
             if (!verifyChannel) {
-                return interaction.reply({ content: "❌ ไม่พบห้องยืนยันตัวตน!", ephemeral: true });
+                return interaction.editReply({ content: "❌ ไม่พบห้องยืนยันตัวตน!", ephemeral: true });
             }
     
-            // ลบห้องยืนยันตัวตน
             await verifyChannel.delete();
-            return interaction.reply({ content: "✅ ห้องยืนยันตัวตนถูกลบเรียบร้อย!", ephemeral: true });
+            return interaction.editReply({ content: "✅ ห้องยืนยันตัวตนถูกลบเรียบร้อย!", ephemeral: true });
         }
     
-        // ✅ ถ้าไม่ได้ใช้ `/setup remove` → สร้างห้องยืนยันตัวตน
+        // ✅ โหลดข้อมูลเซิร์ฟเวอร์ใหม่ก่อนสร้างห้อง (ป้องกัน channels เป็น null)
+        await interaction.guild.fetch();
+    
         let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
         if (!verifyChannel) {
             verifyChannel = await interaction.guild.channels.create({
@@ -219,25 +226,29 @@ client.on('interactionCreate', async (interaction) => {
             components: [verifyRow]
         });
     
-        await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
+        await interaction.editReply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
     }
     
     // ✅ ระบบยืนยันตัวตนเมื่อกดปุ่ม
     if (interaction.isButton() && interaction.customId === "start_verification") {
+        if (!interaction.guild) {
+            return interaction.reply({ content: "❌ คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์เท่านั้น!", ephemeral: true });
+        }
+    
         const roleName = "สมาชิก";
         const role = interaction.guild.roles.cache.find(r => r.name === roleName);
     
         if (!role) {
-            return await interaction.reply({ content: "❌ ไม่พบยศ 'สมาชิก' ในเซิร์ฟเวอร์! โปรดสร้างยศนี้ก่อน.", ephemeral: true });
+            return interaction.reply({ content: "❌ ไม่พบยศ 'สมาชิก' ในเซิร์ฟเวอร์! โปรดสร้างยศนี้ก่อน.", ephemeral: true });
         }
     
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member) {
-            return await interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
+            return interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
         }
     
         if (member.roles.cache.has(role.id)) {
-            return await interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
+            return interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
         }
     
         await member.roles.add(role).catch(err => {
@@ -247,6 +258,7 @@ client.on('interactionCreate', async (interaction) => {
     
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
+    
     
 
     if (interaction.commandName === 'setupstats') {
