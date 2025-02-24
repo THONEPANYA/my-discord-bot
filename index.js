@@ -115,6 +115,20 @@ const commands = [
             .setDescription('จำนวนเงินที่ต้องการเดิมพัน')
             .setRequired(true)
         ),
+
+    new SlashCommandBuilder()
+        .setName('work')
+        .setDescription('👷‍♂️ เลือกอาชีพและเล่นมินิเกมเพื่อหาเงิน')
+        .addStringOption(option =>
+            option.setName('job')
+            .setDescription('เลือกอาชีพของคุณ')
+            .setRequired(true)
+            .addChoices(
+                { name: '👷‍♂️ ช่างไม้', value: 'carpenter' },
+                { name: '👨‍🍳 เชฟ', value: 'chef' },
+                { name: '💻 โปรแกรมเมอร์', value: 'programmer' }
+            )),
+    
 ];
 
 const statsChannels = {};
@@ -488,6 +502,7 @@ client.on('interactionCreate', async (interaction) => {
         await user.save();
     }
 
+    // ✅ Slot Machine
     if (interaction.commandName === 'slot') {
         await interaction.deferReply({ ephemeral: true });
     
@@ -527,7 +542,61 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply({ content: resultMessage, ephemeral: true });
     }
     
-             
+    // ✅ ทำงานเพื่อรับเงิน
+    if (interaction.commandName === 'work') {
+        await interaction.deferReply({ ephemeral: true });
+    
+        const job = interaction.options.getString('job');
+        const jobs = {
+            carpenter: { name: "👷‍♂️ ช่างไม้", min: 100, max: 300 },
+            chef: { name: "👨‍🍳 เชฟ", min: 150, max: 400 },
+            programmer: { name: "💻 โปรแกรมเมอร์", min: 200, max: 500 }
+        };
+    
+        if (!jobs[job]) {
+            return interaction.editReply({ content: "❌ อาชีพที่คุณเลือกไม่มีในระบบ!", ephemeral: true });
+        }
+    
+        let user = await Economy.findOne({ userId: interaction.user.id });
+        if (!user) {
+            user = new Economy({ userId: interaction.user.id });
+        }
+    
+        const now = new Date();
+        const cooldown = 60 * 60 * 1000; // 1 ชั่วโมง
+    
+        if (user.lastWork && now - user.lastWork < cooldown) {
+            const remainingTime = cooldown - (now - user.lastWork);
+            const minutes = Math.floor(remainingTime / (1000 * 60));
+            const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+            return interaction.editReply({ content: `⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`, ephemeral: true });
+        }
+    
+        // ✅ เริ่มมินิเกม (ทายเลข)
+        const randomNumber = Math.floor(Math.random() * 10) + 1;
+        const userNumber = Math.floor(Math.random() * 10) + 1; // จำลองว่าผู้ใช้สุ่มเลข
+        let earnings = Math.floor(Math.random() * (jobs[job].max - jobs[job].min + 1)) + jobs[job].min;
+    
+        let resultMessage = `👷‍♂️ **${interaction.user.username}** ทำงานเป็น **${jobs[job].name}**\n`;
+        resultMessage += `🎮 **มินิเกม:** ทายเลขระหว่าง 1-10\n`;
+        resultMessage += `🔢 คุณสุ่มได้: **${userNumber}**\n`;
+        resultMessage += `🎯 หมายเลขที่ถูกต้อง: **${randomNumber}**\n`;
+    
+        if (userNumber === randomNumber) {
+            earnings *= 2; // ถ้าชนะ ได้เงินคูณ 2
+            resultMessage += `🎉 คุณชนะ! ได้รับโบนัส!`;
+        } else {
+            resultMessage += `😢 คุณแพ้ แต่ยังได้รับค่าจ้างปกติ`;
+        }
+    
+        user.wallet += earnings;
+        user.lastWork = now;
+        await user.save();
+    
+        resultMessage += `\n💰 ได้รับเงิน: **${earnings}** 🪙`;
+        await interaction.editReply({ content: resultMessage, ephemeral: true });
+    }
+    
         
         
 });
