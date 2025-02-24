@@ -5,7 +5,11 @@ import {
 } from 'discord.js';
 import 'dotenv/config';
 
+// import mongoose database
 import mongoose from 'mongoose';
+
+// import economy.js
+import Economy from './models/economy.js';
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
@@ -114,7 +118,7 @@ client.on('interactionCreate', async (interaction) => {
             components: [verifyRow]
         });
 
-        await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
+        await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", flags: 64 });
     }
 
     if (interaction.isButton() && interaction.customId === "start_verification") {
@@ -201,6 +205,94 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
     client.on("guildMemberAdd", async (member) => updateStats(member.guild));
     client.on("guildMemberRemove", async (member) => updateStats(member.guild));
+
+
+    // ✅ Ecomony System
+    
+        // ✅ เช็คยอดเงิน
+        if (interaction.commandName === 'balance') {
+            let user = await Economy.findOne({ userId: interaction.user.id });
+            if (!user) {
+                user = new Economy({ userId: interaction.user.id });
+                await user.save();
+            }
+    
+            await interaction.reply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
+        }
+    
+        // ✅ รับเงินประจำวัน
+        if (interaction.commandName === 'daily') {
+            let user = await Economy.findOne({ userId: interaction.user.id });
+            if (!user) {
+                user = new Economy({ userId: interaction.user.id });
+            }
+    
+            user.wallet += 500;
+            await user.save();
+    
+            await interaction.reply(`✅ **${interaction.user.username}** คุณได้รับ **500** 🪙 จากเงินประจำวัน!`);
+        }
+    
+        // ✅ โอนเงินให้สมาชิก
+        if (interaction.commandName === 'transfer') {
+            const targetUser = interaction.options.getUser('user');
+            const amount = interaction.options.getInteger('amount');
+    
+            if (!targetUser || targetUser.id === interaction.user.id) {
+                return interaction.reply("❌ ไม่สามารถโอนเงินให้ตัวเองได้!", { flags: 64 });
+            }
+    
+            let sender = await Economy.findOne({ userId: interaction.user.id });
+            let receiver = await Economy.findOne({ userId: targetUser.id });
+    
+            if (!sender || sender.wallet < amount) {
+                return interaction.reply("❌ คุณมีเงินไม่เพียงพอ!", { flags: 64 });
+            }
+    
+            if (!receiver) {
+                receiver = new Economy({ userId: targetUser.id });
+            }
+    
+            sender.wallet -= amount;
+            receiver.wallet += amount;
+    
+            await sender.save();
+            await receiver.save();
+    
+            await interaction.reply(`✅ **${interaction.user.username}** ได้โอน **${amount}** 🪙 ให้ **${targetUser.username}**`);
+        }
+    
+        // ✅ ฝากเงินเข้าธนาคาร
+        if (interaction.commandName === 'deposit') {
+            const amount = interaction.options.getInteger('amount');
+            let user = await Economy.findOne({ userId: interaction.user.id });
+    
+            if (!user || user.wallet < amount) {
+                return interaction.reply("❌ คุณมีเงินไม่พอในกระเป๋า!", { flags: 64 });
+            }
+    
+            user.wallet -= amount;
+            user.bank += amount;
+            await user.save();
+    
+            await interaction.reply(`✅ คุณฝากเงิน **${amount}** 🪙 เข้าไปในธนาคารแล้ว!`);
+        }
+    
+        // ✅ ถอนเงินจากธนาคาร
+        if (interaction.commandName === 'withdraw') {
+            const amount = interaction.options.getInteger('amount');
+            let user = await Economy.findOne({ userId: interaction.user.id });
+    
+            if (!user || user.bank < amount) {
+                return interaction.reply("❌ คุณมีเงินไม่พอในธนาคาร!", { flags: 64 });
+            }
+    
+            user.bank -= amount;
+            user.wallet += amount;
+            await user.save();
+    
+            await interaction.reply(`✅ คุณถอนเงิน **${amount}** 🪙 ออกจากธนาคารแล้ว!`);
+        }
 });
 
 client.login(process.env.TOKEN);
