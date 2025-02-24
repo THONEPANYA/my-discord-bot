@@ -34,7 +34,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('setup')
         .setDescription('📌 ตั้งค่าระบบยืนยันตัวตน')
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+        .addStringOption(option => option.setName('role').setDescription('ชื่อยศสำหรับผู้ที่ยืนยันตัวตน').setRequired(false)),
 
     new SlashCommandBuilder()
         .setName('setupstats')
@@ -137,11 +137,69 @@ client.once('ready', async () => {
     await registerCommands();
 });
 
-// ✅ ระบบยืนยันตัวตน
+
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand() && !interaction.isButton()) return;
 
+    // ✅ คำสั่ง /help
+    if (interaction.commandName === 'help') {
+        await interaction.deferReply({ ephemeral: true });
+
+        const helpMessage = `
+        📖 **คำสั่งที่สามารถใช้ได้** 📖
+        
+        🔰 **ระบบทั่วไป**
+        - \`/setup\` 📌 ตั้งค่าระบบยืนยันตัวตน
+        - \`/setupstats\` 📊 ตั้งค่าห้อง Server Stats
+        
+        💰 **ระบบเงิน Economy**
+        - \`/balance\` 💰 เช็คยอดเงินของคุณ
+        - \`/daily\` 💵 รับเงินประจำวัน
+        - \`/work\` 👷 ทำงานเพื่อรับเงิน (โอกาสพิเศษ & โบนัส!)
+        - \`/transfer <user> <amount>\` 💸 โอนเงินให้สมาชิก
+        - \`/deposit <amount>\` 🏦 ฝากเงินเข้าธนาคาร
+        - \`/withdraw <amount>\` 🏦 ถอนเงินจากธนาคาร
+        - \`/leaderboard\` 🏆 ดูอันดับผู้ที่มีเงินมากที่สุด
+
+        🎰 **เกมพนัน**
+        - \`/gamble <amount>\` 🎲 เดิมพันเงินของคุณ
+        - \`/slot <amount>\` 🎰 หมุนสล็อตแมชชีน (Mega Jackpot & Free Spin!)
+
+        ⚙️ **ระบบแอดมิน (สำหรับแอดมินเท่านั้น)**
+        - \`/setmoney <user> <amount>\` 💰 ตั้งค่าจำนวนเงินของผู้ใช้
+        - \`/addmoney <user> <amount>\` 💰 เพิ่มจำนวนเงินให้ผู้ใช้
+        - \`/removemoney <user> <amount>\` 💰 หักเงินจากผู้ใช้
+
+        ⚡ **หมายเหตุ**  
+        - คำสั่งที่มี 🏦 ใช้กับระบบธนาคาร  
+        - คำสั่งที่มี 🎰 ใช้กับเกม  
+        - คำสั่งที่มี 🔰 ใช้กับระบบเซิร์ฟเวอร์  
+        - **บอทนี้ใช้ MongoDB ในการเก็บข้อมูล Economy**  
+
+        หากมีปัญหาการใช้งาน ติดต่อแอดมินเซิร์ฟเวอร์! 📩
+        `;
+
+        await interaction.editReply({ content: helpMessage, ephemeral: true });
+    }
+
+    // ✅ ป้องกันข้อผิดพลาด: ตรวจสอบว่า interaction มาจากเซิร์ฟเวอร์เท่านั้น
+    if (!interaction.guild) {
+        return interaction.reply({ content: "❌ คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์เท่านั้น!", ephemeral: true });
+    }
+
+    // ✅ คำสั่ง /setup - ตั้งค่าระบบยืนยันตัวตน
     if (interaction.commandName === 'setup') {
+        const subcommand = interaction.options.getSubcommand(false);
+        
+        if (subcommand === 'remove') {
+            let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
+            if (!verifyChannel) {
+                return interaction.reply({ content: "❌ ไม่พบห้องยืนยันตัวตน!", ephemeral: true });
+            }
+            await verifyChannel.delete();
+            return interaction.reply({ content: "✅ ห้องยืนยันตัวตนถูกลบเรียบร้อย!", ephemeral: true });
+        }
+
         let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
         if (!verifyChannel) {
             verifyChannel = await interaction.guild.channels.create({
@@ -167,19 +225,28 @@ client.on('interactionCreate', async (interaction) => {
 
     if (interaction.isButton() && interaction.customId === "start_verification") {
         const roleName = "สมาชิก";
-        const role = interaction.guild.roles.cache.find(r => r.name === roleName);
-
+        let role = interaction.guild.roles.cache.find(r => r.name === roleName);
+        
         if (!role) {
-            return await interaction.reply({ content: "❌ ไม่พบยศ 'สมาชิก' ในเซิร์ฟเวอร์! โปรดสร้างยศนี้ก่อน.", ephemeral: true });
+            try {
+                role = await interaction.guild.roles.create({
+                    name: roleName,
+                    color: "BLUE",
+                    permissions: []
+                });
+            } catch (error) {
+                console.error("❌ ไม่สามารถสร้างยศได้:", error);
+                return interaction.reply({ content: "❌ บอทไม่มีสิทธิ์สร้างยศ! โปรดตรวจสอบสิทธิ์ของบอท.", ephemeral: true });
+            }
         }
 
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member) {
-            return await interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
+            return interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
         }
 
         if (member.roles.cache.has(role.id)) {
-            return await interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
+            return interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
         }
 
         await member.roles.add(role).catch(err => {
@@ -190,7 +257,19 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
 
+    // ✅ คำสั่ง /setupstats - ตั้งค่าห้อง Server Stats
     if (interaction.commandName === 'setupstats') {
+        const subcommand = interaction.options.getSubcommand(false);
+        
+        if (subcommand === 'remove') {
+            let statsCategory = interaction.guild.channels.cache.find(ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory);
+            if (!statsCategory) {
+                return interaction.reply({ content: "❌ ไม่พบห้องสถิติ!", ephemeral: true });
+            }
+            await statsCategory.delete();
+            return interaction.reply({ content: "✅ ห้องสถิติถูกลบเรียบร้อย!", ephemeral: true });
+        }
+
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
 
         let statsCategory = interaction.guild.channels.cache.find(
@@ -205,27 +284,6 @@ client.on('interactionCreate', async (interaction) => {
             });
         }
 
-        const stats = {
-            members: `👥 สมาชิก: ${interaction.guild.memberCount}`,
-            textChannels: `💬 ข้อความ: ${interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`,
-            voiceChannels: `🔊 ห้องเสียง: ${interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`
-        };
-
-        for (const [key, name] of Object.entries(stats)) {
-            let channel = interaction.guild.channels.cache.find(
-                ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice
-            );
-
-            if (!channel) {
-                channel = await interaction.guild.channels.create({
-                    name,
-                    type: ChannelType.GuildVoice,
-                    parent: statsCategory.id,
-                    permissionOverwrites: [{ id: interaction.guild.id, deny: [PermissionsBitField.Flags.Connect] }]
-                });
-            }
-        }
-
         await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
         updateStats(interaction.guild);
     }
@@ -234,9 +292,9 @@ client.on('interactionCreate', async (interaction) => {
         const members = `👥 สมาชิก: ${guild.memberCount}`;
         const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
         const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
-    
+
         const stats = { members, textChannels, voiceChannels };
-    
+
         for (const [key, name] of Object.entries(stats)) {
             let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
             if (channel) {
@@ -244,14 +302,9 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
     }
-    
-    // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
-    client.on("guildMemberAdd", async (member) => updateStats(member.guild));
-    client.on("guildMemberRemove", async (member) => updateStats(member.guild));
 
 
-
-        // ✅ เช็คยอดเงิน
+    // ✅ เช็คยอดเงิน
         if (interaction.commandName === 'balance') {
             await interaction.deferReply({ ephemeral: true });  // ✅ บอทแจ้งว่าแสดงให้เฉพาะคนใช้คำสั่ง
         
@@ -504,25 +557,33 @@ client.on('interactionCreate', async (interaction) => {
         const symbols = ["🍒", "🍊", "⭐", "🍉", "🔔", "💎"];
         let slotResult = [];
     
-        // 🌀 **กำหนดโอกาสชนะ-แพ้**
+        // 🌀 **กำหนดโอกาสชนะ**
         const odds = {
-            jackpot: 0.05,  // 🎰 แจ็คพอต (5%) → ได้เงิน 10 เท่า
-            twoMatch: 0.35, // 🎖️ ได้ 2 ตัวเหมือนกัน (35%) → ได้ 2 เท่า
-            lose: 0.60      // 😢 แพ้ (60%) → เสียเงินเดิมพัน
+            megaJackpot: 0.01,  // 🔥 Mega Jackpot (1%) → ได้ 50 เท่า
+            jackpot: 0.05,      // 🎰 แจ็คพอตปกติ (5%) → ได้ 10 เท่า
+            twoMatch: 0.35,     // 🎖️ ได้ 2 ตัวเหมือนกัน (35%) → ได้ 2 เท่า
+            freeSpin: 0.10,     // 🎟️ Free Spin (10%) → ได้หมุนฟรี
+            lose: 0.60          // 😢 แพ้ (60%) → เสียเงินเดิมพัน
         };
     
         let winType = "lose";
+        let megaJackpotRoll = Math.random();
         let jackpotRoll = Math.random();
         let twoMatchRoll = Math.random();
+        let freeSpinRoll = Math.random();
     
-        if (jackpotRoll < odds.jackpot) {
+        if (megaJackpotRoll < odds.megaJackpot) {
+            winType = "megaJackpot";
+        } else if (jackpotRoll < odds.jackpot) {
             winType = "jackpot";
         } else if (twoMatchRoll < odds.twoMatch) {
             winType = "twoMatch";
         }
     
         // 🌀 **สร้างผลลัพธ์ที่เหมาะสมกับโอกาสที่สุ่มได้**
-        if (winType === "jackpot") {
+        if (winType === "megaJackpot") {
+            slotResult = ["💎", "💎", "💎"];
+        } else if (winType === "jackpot") {
             let luckySymbol = symbols[Math.floor(Math.random() * symbols.length)];
             slotResult = [luckySymbol, luckySymbol, luckySymbol];
         } else if (winType === "twoMatch") {
@@ -541,17 +602,27 @@ client.on('interactionCreate', async (interaction) => {
         let winAmount = 0;
         let message = "";
     
-        if (winType === "jackpot") {
-            winAmount = betAmount * 10;  // ✅ ได้ 10 เท่าของเงินเดิมพัน
+        if (winType === "megaJackpot") {
+            winAmount = betAmount * 50;
+            message = `🎰 **MEGA JACKPOT!!!** 🎰\n💰 คุณชนะ **${winAmount} 🪙**! 🎆🔥`;
+        } else if (winType === "jackpot") {
+            winAmount = betAmount * 10;
             message = `🎰 **JACKPOT!** 🎰\n💎 คุณชนะ **${winAmount} 🪙**! 🎉`;
         } else if (winType === "twoMatch") {
-            winAmount = betAmount * 2;  // ✅ ได้ 2 เท่าของเงินเดิมพัน
+            winAmount = betAmount * 2;
             message = `✨ คุณชนะ **${winAmount} 🪙**!`;
         } else {
             message = `😢 คุณแพ้และเสีย ${betAmount} 🪙... (ลองใหม่อีกครั้ง!)`;
         }
     
         user.wallet += winAmount;
+    
+        // 🎟️ **Free Spin Bonus**
+        if (freeSpinRoll < odds.freeSpin) {
+            user.wallet += betAmount;  // ✅ คืนเงินเดิมพัน
+            message += `\n🎟️ **คุณได้ Free Spin! หมุนฟรีอีก 1 ครั้ง!**`;
+        }
+    
         await user.save();
     
         // 🎰 **อนิเมชันสล็อตหมุน**
@@ -570,6 +641,7 @@ client.on('interactionCreate', async (interaction) => {
         // 🎯 **แสดงผลลัพธ์สุดท้าย**
         await interaction.editReply(`${slotAnimation[slotAnimation.length - 1]}\n${message}`);
     }
+    
     
     
     // ✅ ทำงานเพื่อรับเงิน

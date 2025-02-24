@@ -189,6 +189,9 @@ client.on('interactionCreate', async (interaction) => {
 
     // ✅ คำสั่ง /setup - ตั้งค่าระบบยืนยันตัวตน
     if (interaction.commandName === 'setup') {
+
+        await interaction.deferReply({ ephemeral: true }); // ป้องกัน Timeout
+
         const subcommand = interaction.options.getSubcommand(false);
         
         if (subcommand === 'remove') {
@@ -259,6 +262,9 @@ client.on('interactionCreate', async (interaction) => {
 
     // ✅ คำสั่ง /setupstats - ตั้งค่าห้อง Server Stats
     if (interaction.commandName === 'setupstats') {
+
+        await interaction.deferReply(); // ป้องกัน Timeout
+
         const subcommand = interaction.options.getSubcommand(false);
         
         if (subcommand === 'remove') {
