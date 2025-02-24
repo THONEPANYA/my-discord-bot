@@ -490,10 +490,10 @@ client.on('interactionCreate', async (interaction) => {
 
     // ✅ Slot Machine
     if (interaction.commandName === 'slot') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: false });
     
         const amount = interaction.options.getInteger('amount');
-        const fruits = ["🍎", "🍊", "🍇", "🍉", "🍒"];  // 🔹 สัญลักษณ์สล็อต
+        const fruits = ["🍎", "🍊", "🍇", "🍉", "🍒", "⭐"];  
     
         if (amount <= 0) {
             return interaction.editReply({ content: "❌ คุณต้องเดิมพันมากกว่า 0 🪙!", ephemeral: true });
@@ -504,29 +504,62 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.editReply({ content: "❌ คุณมีเงินไม่พอสำหรับการเดิมพัน!", ephemeral: true });
         }
     
-        // สุ่มผลลัพธ์สล็อต 3 ช่อง
-        const slot1 = fruits[Math.floor(Math.random() * fruits.length)];
-        const slot2 = fruits[Math.floor(Math.random() * fruits.length)];
-        const slot3 = fruits[Math.floor(Math.random() * fruits.length)];
+        // 🎰 สุ่มผลลัพธ์สล็อต 3 ช่อง (ค่าจริง)
+        const finalSlots = [
+            fruits[Math.floor(Math.random() * fruits.length)],
+            fruits[Math.floor(Math.random() * fruits.length)],
+            fruits[Math.floor(Math.random() * fruits.length)]
+        ];
     
-        let resultMessage = `🎰 | **${slot1} | ${slot2} | ${slot3}** |\n`;
-        
-        if (slot1 === slot2 && slot2 === slot3) {
-            // ชนะ 3 เท่าของเงินเดิมพัน
-            user.wallet += amount * 3;
-            resultMessage += `🎉 แจ็คพอต! คุณชนะ **${amount * 3}** 🪙!`;
-        } else if (slot1 === slot2 || slot2 === slot3 || slot1 === slot3) {
-            // คืนเงินเดิมพัน
-            resultMessage += `😊 คุณได้คืนเงิน **${amount}** 🪙!`;
-        } else {
-            // เสียเงินเดิมพัน
-            user.wallet -= amount;
-            resultMessage += `😢 คุณแพ้และเสีย **${amount}** 🪙!`;
+        // 🎰 สร้างเอฟเฟกต์การหมุน
+        let frames = [];
+        for (let i = 0; i < 10; i++) {  // หมุน 10 รอบ
+            frames.push([
+                fruits[Math.floor(Math.random() * fruits.length)],
+                fruits[Math.floor(Math.random() * fruits.length)],
+                fruits[Math.floor(Math.random() * fruits.length)]
+            ]);
         }
+        frames.push(finalSlots); // ใส่ผลลัพธ์สุดท้ายลงไป
     
-        await user.save();
-        await interaction.editReply({ content: resultMessage, ephemeral: true });
+        // แสดงแอนิเมชันสล็อตทีละเฟรม
+        let frameIndex = 0;
+        const slotAnimation = async () => {
+            if (frameIndex < frames.length) {
+                await interaction.editReply({
+                    content: `🎰 | **${frames[frameIndex][0]} | ${frames[frameIndex][1]} | ${frames[frameIndex][2]}** |\n⏳ หมุนสล็อต...`,
+                    ephemeral: true
+                });
+                frameIndex++;
+                setTimeout(slotAnimation, 500); // หน่วงเวลา 500ms แล้วแสดงเฟรมถัดไป
+            } else {
+                // 🎰 แสดงผลลัพธ์สุดท้าย
+                let resultMessage = `🎰 | **${finalSlots[0]} | ${finalSlots[1]} | ${finalSlots[2]}** |\n`;
+    
+                let multiplier = 1;
+                if (finalSlots[0] === finalSlots[1] && finalSlots[1] === finalSlots[2]) {
+                    // ชนะ 5 เท่าถ้าทั้ง 3 ช่องเหมือนกัน
+                    multiplier = finalSlots[0] === "⭐" ? 10 : 5;
+                    user.wallet += amount * multiplier;
+                    resultMessage += `🎉 แจ็คพอต! คุณชนะ **${amount * multiplier}** 🪙! 🎆✨`;
+                } else if (finalSlots[0] === finalSlots[1] || finalSlots[1] === finalSlots[2] || finalSlots[0] === finalSlots[2]) {
+                    user.wallet += amount;
+                    resultMessage += `😊 คุณได้คืนเงิน **${amount}** 🪙! 🎵🎶`;
+                } else {
+                    user.wallet -= amount;
+                    resultMessage += `😢 คุณแพ้และเสีย **${amount}** 🪙! 🎭`;
+                }
+    
+                await user.save();
+                await interaction.editReply({ content: resultMessage, ephemeral: true });
+            }
+        };
+    
+        slotAnimation(); // เริ่มต้นการหมุน
     }
+    
+    
+    
         
         
 });
