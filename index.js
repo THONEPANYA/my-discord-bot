@@ -134,16 +134,15 @@ const commands = [
 const statsChannels = {};
 
 // ✅ ลงทะเบียน Slash Commands
-async function registerCommands() {
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+(async () => {
     try {
-        console.log("📌 กำลังลงทะเบียน Slash Commands...");
-        await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-        console.log("✅ ลงทะเบียน Slash Commands สำเร็จ!");
+        console.log("📌 กำลังลบ Slash Commands ทั้งหมด...");
+        await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: [] });
+        console.log("✅ ลบ Slash Commands สำเร็จ!");
     } catch (error) {
-        console.error("❌ ลงทะเบียน Slash Commands ล้มเหลว:", error);
+        console.error("❌ ลบ Slash Commands ล้มเหลว:", error);
     }
-}
+})();
 
 // ✅ บอทพร้อมทำงาน
 client.once('ready', async () => {
