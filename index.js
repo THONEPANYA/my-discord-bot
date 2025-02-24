@@ -5,25 +5,13 @@ import {
 } from 'discord.js';
 import 'dotenv/config';
 
-// import mongoose database
 import mongoose from 'mongoose';
-
-// import economy.js
-import Economy from './models/economy.js';
-
-const user = await Economy.findOne({ userId: 'YOUR_DISCORD_USER_ID' });
-console.log(user);
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000, // ⏳ ลดเวลารอจาก 10000ms → 5000ms
-})
-.then(() => console.log('✅ เชื่อมต่อ MongoDB สำเร็จ!'))
-.catch(err => console.error('❌ ไม่สามารถเชื่อมต่อ MongoDB:', err));
-
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('✅ เชื่อมต่อ MongoDB สำเร็จ!'))
+    .catch(err => console.error('❌ ไม่สามารถเชื่อมต่อ MongoDB:', err));
 
 // ตรวจสอบ Token
 if (!process.env.TOKEN || !process.env.CLIENT_ID) {
@@ -48,7 +36,7 @@ const commands = [
         .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
     new SlashCommandBuilder()
-        .setName('stats')
+        .setName('setupstats')
         .setDescription('📊 ตั้งค่าห้อง Server Stats')
         .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
@@ -79,10 +67,6 @@ const commands = [
         .setName('withdraw')
         .setDescription('🏦 ถอนเงินจากธนาคาร')
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
-    new SlashCommandBuilder()
-        .setName('work')
-        .setDescription('💼 ทำงานเพื่อรับเงิน'),
-    
 ];
 
 const statsChannels = {};
@@ -130,7 +114,7 @@ client.on('interactionCreate', async (interaction) => {
             components: [verifyRow]
         });
 
-        await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", flags: 64 });
+        await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
     }
 
     if (interaction.isButton() && interaction.customId === "start_verification") {
@@ -158,8 +142,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
 
-    // ✅ คำสั่ง /stats สำหรับตั้งค่าห้อง Server Stats ในเซิร์ฟเวอร์
-    if (interaction.commandName === 'stats') {
+    if (interaction.commandName === 'setupstats') {
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
 
         let statsCategory = interaction.guild.channels.cache.find(
@@ -217,141 +200,6 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
     client.on("guildMemberAdd", async (member) => updateStats(member.guild));
     client.on("guildMemberRemove", async (member) => updateStats(member.guild));
-
-
-    // ✅ Ecomony System
-    
-        // ✅ เช็คยอดเงิน
-        if (interaction.commandName === 'balance') {
-            await interaction.deferReply();  // ✅ ป้องกัน "Unknown interaction"
-            
-            let user = await Economy.findOne({ userId: interaction.user.id });
-            if (!user) {
-                user = new Economy({ userId: interaction.user.id });
-                await user.save();
-            }
-        
-            await interaction.editReply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
-        }              
-    
-        // ✅ รับเงินประจำวัน
-        if (interaction.commandName === 'daily') {
-            let user = await Economy.findOne({ userId: interaction.user.id });
-        
-            if (!user) {
-                user = new Economy({ userId: interaction.user.id });
-            }
-        
-            const now = new Date();
-            const cooldown = 24 * 60 * 60 * 1000; // 24 ชั่วโมง (มิลลิวินาที)
-        
-            if (user.lastDaily && now - user.lastDaily < cooldown) {
-                const remainingTime = cooldown - (now - user.lastDaily);
-                const hours = Math.floor(remainingTime / (1000 * 60 * 60));
-                const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
-        
-                return interaction.reply(`⏳ คุณสามารถรับเงินประจำวันได้อีกครั้งใน **${hours} ชั่วโมง ${minutes} นาที**`, { flags: 64 });
-            }
-        
-            // ✅ ถ้าผ่าน Cooldown สามารถรับเงินได้
-            user.wallet += 500;
-            user.lastDaily = now;
-            await user.save();
-        
-            await interaction.reply(`✅ **${interaction.user.username}** คุณได้รับ **500** 🪙 จากเงินประจำวัน!`);
-        }
-    
-        // ✅ โอนเงินให้สมาชิก
-        if (interaction.commandName === 'transfer') {
-            const targetUser = interaction.options.getUser('user');
-            const amount = interaction.options.getInteger('amount');
-    
-            if (!targetUser || targetUser.id === interaction.user.id) {
-                return interaction.reply("❌ ไม่สามารถโอนเงินให้ตัวเองได้!", { flags: 64 });
-            }
-    
-            let sender = await Economy.findOne({ userId: interaction.user.id });
-            let receiver = await Economy.findOne({ userId: targetUser.id });
-    
-            if (!sender || sender.wallet < amount) {
-                return interaction.reply("❌ คุณมีเงินไม่เพียงพอ!", { flags: 64 });
-            }
-    
-            if (!receiver) {
-                receiver = new Economy({ userId: targetUser.id });
-            }
-    
-            sender.wallet -= amount;
-            receiver.wallet += amount;
-    
-            await sender.save();
-            await receiver.save();
-    
-            await interaction.reply(`✅ **${interaction.user.username}** ได้โอน **${amount}** 🪙 ให้ **${targetUser.username}**`);
-        }
-    
-        // ✅ ฝากเงินเข้าธนาคาร
-        if (interaction.commandName === 'deposit') {
-            const amount = interaction.options.getInteger('amount');
-            let user = await Economy.findOne({ userId: interaction.user.id });
-    
-            if (!user || user.wallet < amount) {
-                return interaction.reply("❌ คุณมีเงินไม่พอในกระเป๋า!", { flags: 64 });
-            }
-    
-            user.wallet -= amount;
-            user.bank += amount;
-            await user.save();
-    
-            await interaction.reply(`✅ คุณฝากเงิน **${amount}** 🪙 เข้าไปในธนาคารแล้ว!`);
-        }
-    
-        // ✅ ถอนเงินจากธนาคาร
-        if (interaction.commandName === 'withdraw') {
-            const amount = interaction.options.getInteger('amount');
-            let user = await Economy.findOne({ userId: interaction.user.id });
-    
-            if (!user || user.bank < amount) {
-                return interaction.reply("❌ คุณมีเงินไม่พอในธนาคาร!", { flags: 64 });
-            }
-    
-            user.bank -= amount;
-            user.wallet += amount;
-            await user.save();
-    
-            await interaction.reply(`✅ คุณถอนเงิน **${amount}** 🪙 ออกจากธนาคารแล้ว!`);
-        }
-
-        // ✅ ทำงานเพื่อรับเงิน
-        if (interaction.commandName === 'work') {
-            await interaction.deferReply();  // ✅ ป้องกัน "Unknown interaction"
-        
-            let user = await Economy.findOne({ userId: interaction.user.id });
-            if (!user) {
-                user = new Economy({ userId: interaction.user.id });
-            }
-        
-            const now = new Date();
-            const cooldown = 60 * 60 * 1000; // 1 ชั่วโมง (มิลลิวินาที)
-        
-            if (user.lastWork && now - user.lastWork < cooldown) {
-                const remainingTime = cooldown - (now - user.lastWork);
-                const minutes = Math.floor(remainingTime / (1000 * 60));
-                const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
-        
-                return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
-            }
-        
-            // ✅ สุ่มเงินที่จะได้รับจากการทำงาน
-            const earnings = Math.floor(Math.random() * (500 - 100 + 1)) + 100; // รับเงิน 100 - 500 🪙
-            user.wallet += earnings;
-            user.lastWork = now;
-            await user.save();
-        
-            await interaction.editReply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
-        }        
-
-        
 });
 
 client.login(process.env.TOKEN);
