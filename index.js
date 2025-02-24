@@ -71,6 +71,11 @@ const commands = [
         .setName('withdraw')
         .setDescription('🏦 ถอนเงินจากธนาคาร')
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงิน').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('work')
+        .setDescription('💼 ทำงานเพื่อรับเงิน'),
+    
 ];
 
 const statsChannels = {};
@@ -223,13 +228,27 @@ client.on('interactionCreate', async (interaction) => {
         // ✅ รับเงินประจำวัน
         if (interaction.commandName === 'daily') {
             let user = await Economy.findOne({ userId: interaction.user.id });
+        
             if (!user) {
                 user = new Economy({ userId: interaction.user.id });
             }
-    
+        
+            const now = new Date();
+            const cooldown = 24 * 60 * 60 * 1000; // 24 ชั่วโมง (มิลลิวินาที)
+        
+            if (user.lastDaily && now - user.lastDaily < cooldown) {
+                const remainingTime = cooldown - (now - user.lastDaily);
+                const hours = Math.floor(remainingTime / (1000 * 60 * 60));
+                const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+        
+                return interaction.reply(`⏳ คุณสามารถรับเงินประจำวันได้อีกครั้งใน **${hours} ชั่วโมง ${minutes} นาที**`, { flags: 64 });
+            }
+        
+            // ✅ ถ้าผ่าน Cooldown สามารถรับเงินได้
             user.wallet += 500;
+            user.lastDaily = now;
             await user.save();
-    
+        
             await interaction.reply(`✅ **${interaction.user.username}** คุณได้รับ **500** 🪙 จากเงินประจำวัน!`);
         }
     
@@ -293,6 +312,35 @@ client.on('interactionCreate', async (interaction) => {
     
             await interaction.reply(`✅ คุณถอนเงิน **${amount}** 🪙 ออกจากธนาคารแล้ว!`);
         }
+
+        // ✅ ทำงานเพื่อรับเงิน
+        if (interaction.commandName === 'work') {
+            let user = await Economy.findOne({ userId: interaction.user.id });
+        
+            if (!user) {
+                user = new Economy({ userId: interaction.user.id });
+            }
+        
+            const now = new Date();
+            const cooldown = 60 * 60 * 1000; // 1 ชั่วโมง (มิลลิวินาที)
+        
+            if (user.lastWork && now - user.lastWork < cooldown) {
+                const remainingTime = cooldown - (now - user.lastWork);
+                const minutes = Math.floor(remainingTime / (1000 * 60));
+                const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+        
+                return interaction.reply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`, { flags: 64 });
+            }
+        
+            // ✅ สุ่มเงินที่จะได้รับจากการทำงาน
+            const earnings = Math.floor(Math.random() * (500 - 100 + 1)) + 100; // รับเงิน 100 - 500 🪙
+            user.wallet += earnings;
+            user.lastWork = now;
+            await user.save();
+        
+            await interaction.reply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
+        }
+        
 });
 
 client.login(process.env.TOKEN);
