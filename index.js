@@ -16,9 +16,14 @@ console.log(user);
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('✅ เชื่อมต่อ MongoDB สำเร็จ!'))
-    .catch(err => console.error('❌ ไม่สามารถเชื่อมต่อ MongoDB:', err));
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000, // ⏳ ลดเวลารอจาก 10000ms → 5000ms
+})
+.then(() => console.log('✅ เชื่อมต่อ MongoDB สำเร็จ!'))
+.catch(err => console.error('❌ ไม่สามารถเชื่อมต่อ MongoDB:', err));
+
 
 // ตรวจสอบ Token
 if (!process.env.TOKEN || !process.env.CLIENT_ID) {
