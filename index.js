@@ -276,7 +276,6 @@ client.on('interactionCreate', async (interaction) => {
         
             await interaction.editReply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
         }
-        
     
         // ✅ โอนเงินให้สมาชิก
         if (interaction.commandName === 'transfer') {
