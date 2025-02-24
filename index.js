@@ -115,10 +115,6 @@ const commands = [
             .setDescription('จำนวนเงินที่ต้องการเดิมพัน')
             .setRequired(true)
         ),
-
-    new SlashCommandBuilder()
-        .setName('work')
-        .setDescription('👷 ทำงานเพื่อรับเงิน'),
 ];
 
 const statsChannels = {};
