@@ -181,9 +181,24 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.editReply({ content: helpMessage, ephemeral: true });
     }
-
     // ✅ ระบบยืนยันตัวตน
     if (interaction.commandName === 'setup') {
+        const subcommand = interaction.options.getSubcommand(false);
+
+        if (subcommand === 'remove') {
+            // ค้นหาห้อง "🔰︱ยืนยันตัวตน"
+            let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
+
+            if (!verifyChannel) {
+                return interaction.reply({ content: "❌ ไม่พบห้องยืนยันตัวตน!", ephemeral: true });
+            }
+
+            // ลบห้องยืนยันตัวตน
+            await verifyChannel.delete();
+            return interaction.reply({ content: "✅ ห้องยืนยันตัวตนถูกลบเรียบร้อย!", ephemeral: true });
+        }
+
+        // ✅ ถ้าไม่ได้ใช้ `/setup remove` → สร้างห้องยืนยันตัวตน
         let verifyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🔰︱ยืนยันตัวตน");
         if (!verifyChannel) {
             verifyChannel = await interaction.guild.channels.create({
@@ -207,12 +222,24 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ content: "✅ ตั้งค่าห้องยืนยันตัวตนสำเร็จ!", ephemeral: true });
     }
 
+    // ✅ ระบบยืนยันตัวตนเมื่อกดปุ่ม
     if (interaction.isButton() && interaction.customId === "start_verification") {
         const roleName = "สมาชิก";
-        const role = interaction.guild.roles.cache.find(r => r.name === roleName);
+        let role = interaction.guild.roles.cache.find(r => r.name === roleName);
 
+        // ✅ ถ้าไม่พบยศ "สมาชิก" ให้สร้างขึ้นมา
         if (!role) {
-            return await interaction.reply({ content: "❌ ไม่พบยศ 'สมาชิก' ในเซิร์ฟเวอร์! โปรดสร้างยศนี้ก่อน.", ephemeral: true });
+            try {
+                role = await interaction.guild.roles.create({
+                    name: roleName,
+                    color: "GREEN",
+                    reason: "สร้างยศ 'สมาชิก' อัตโนมัติโดยบอท"
+                });
+                console.log(`✅ สร้างยศ '${roleName}' สำเร็จ!`);
+            } catch (error) {
+                console.error("❌ ไม่สามารถสร้างยศได้:", error);
+                return await interaction.reply({ content: "❌ บอทไม่มีสิทธิ์สร้างยศ! โปรดตรวจสอบสิทธิ์ของบอท.", ephemeral: true });
+            }
         }
 
         const member = await interaction.guild.members.fetch(interaction.user.id);
@@ -231,10 +258,36 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.reply({ content: `✅ คุณได้รับยศ **${role.name}** เรียบร้อยแล้ว!`, ephemeral: true });
     }
-    
-    
+
     // ✅ ตั้งค่าห้อง Server Stats
     if (interaction.commandName === 'setupstats') {
+        const subcommand = interaction.options.getSubcommand(false);
+
+        if (subcommand === 'remove') {
+            // ค้นหาและลบห้องสถิติทั้งหมด
+            let statsChannels = interaction.guild.channels.cache.filter(ch =>
+                ch.parent && ch.parent.name === "📊 Server Stats"
+            );
+
+            if (statsChannels.size === 0) {
+                return interaction.reply({ content: "❌ ไม่พบห้อง Server Stats ที่สามารถลบได้!", ephemeral: true });
+            }
+
+            // ลบทุกห้องในหมวดหมู่
+            for (const channel of statsChannels.values()) {
+                await channel.delete();
+            }
+
+            // ค้นหาและลบหมวดหมู่ "📊 Server Stats"
+            let statsCategory = interaction.guild.channels.cache.find(ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory);
+            if (statsCategory) {
+                await statsCategory.delete();
+            }
+
+            return interaction.reply({ content: "✅ ห้อง Server Stats ถูกลบเรียบร้อย!", ephemeral: true });
+        }
+
+        // ✅ ถ้าไม่ได้ใช้ `/setupstats remove` → สร้างห้อง Server Stats
         await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
 
         let statsCategory = interaction.guild.channels.cache.find(
@@ -272,25 +325,27 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
         updateStats(interaction.guild);
-    }
 
-    async function updateStats(guild) {
-        const members = `👥 สมาชิก: ${guild.memberCount}`;
-        const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
-        const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
-    
-        const stats = { members, textChannels, voiceChannels };
-    
-        for (const [key, name] of Object.entries(stats)) {
-            let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
-            if (channel) {
-                await channel.setName(name).catch(console.error);
+        // ✅ ฟังก์ชันอัปเดต Server Stats
+        async function updateStats(guild) {
+            const members = `👥 สมาชิก: ${guild.memberCount}`;
+            const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
+            const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
+
+            const stats = { members, textChannels, voiceChannels };
+
+            for (const [key, name] of Object.entries(stats)) {
+                let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
+                if (channel) {
+                    await channel.setName(name).catch(console.error);
+                }
             }
         }
+
+        // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
+        client.on("guildMemberAdd", async (member) => updateStats(member.guild));
+        client.on("guildMemberRemove", async (member) => updateStats(member.guild));
     }
-    
-
-
 
     // ✅ เช็คยอดเงิน
         if (interaction.commandName === 'balance') {
