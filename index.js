@@ -97,7 +97,15 @@ const commands = [
         .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator) // ✅ ให้เฉพาะแอดมินใช้ได้
         .addUserOption(option => option.setName('user').setDescription('เลือกผู้ใช้').setRequired(true))
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงินที่ต้องการหัก').setRequired(true)),
-    
+
+    new SlashCommandBuilder()
+        .setName('gamble')
+        .setDescription('🎰 เดิมพันเงินของคุณ')
+        .addIntegerOption(option => 
+            option.setName('amount')
+            .setDescription('จำนวนเงินที่ต้องการเดิมพัน')
+            .setRequired(true)
+        ),
 ];
 
 const statsChannels = {};
@@ -440,6 +448,35 @@ client.on('interactionCreate', async (interaction) => {
         await user.save();
     
         await interaction.editReply({ content: `✅ หักเงิน **${amount}** 🪙 จาก **${targetUser.username}** แล้ว!`, ephemeral: true });
+    }
+    
+    // ✅ เดิมพันเงินของคุณ
+    if (interaction.commandName === 'gamble') {
+        await interaction.deferReply({ ephemeral: true });
+    
+        const amount = interaction.options.getInteger('amount');
+        
+        if (amount <= 0) {
+            return interaction.editReply({ content: "❌ คุณต้องเดิมพันมากกว่า 0 🪙!", ephemeral: true });
+        }
+    
+        let user = await Economy.findOne({ userId: interaction.user.id });
+        if (!user || user.wallet < amount) {
+            return interaction.editReply({ content: "❌ คุณมีเงินไม่พอสำหรับการเดิมพัน!", ephemeral: true });
+        }
+    
+        // สุ่มผลลัพธ์ (50% ชนะ, 50% แพ้)
+        const win = Math.random() < 0.5;  
+    
+        if (win) {
+            user.wallet += amount;  // ได้เงินเพิ่มเท่าจำนวนที่เดิมพัน
+            await interaction.editReply({ content: `🎉 **${interaction.user.username}** คุณชนะและได้รับ **${amount}** 🪙!`, ephemeral: true });
+        } else {
+            user.wallet -= amount;  // เสียเงินที่เดิมพัน
+            await interaction.editReply({ content: `😢 **${interaction.user.username}** คุณแพ้และเสีย **${amount}** 🪙!`, ephemeral: true });
+        }
+    
+        await user.save();
     }
     
              
