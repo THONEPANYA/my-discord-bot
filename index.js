@@ -493,7 +493,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.deferReply({ ephemeral: true });
     
         const amount = interaction.options.getInteger('amount');
-        const fruits = ["🍎", "🍊", "🍇", "🍉", "🍒"];  // 🔹 สัญลักษณ์สล็อต
+        const fruits = ["🍎", "🍊", "🍇", "🍉", "🍒", "⭐"];  // 🔹 เพิ่ม "⭐" เป็นโบนัสพิเศษ
     
         if (amount <= 0) {
             return interaction.editReply({ content: "❌ คุณต้องเดิมพันมากกว่า 0 🪙!", ephemeral: true });
@@ -504,29 +504,38 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.editReply({ content: "❌ คุณมีเงินไม่พอสำหรับการเดิมพัน!", ephemeral: true });
         }
     
-        // สุ่มผลลัพธ์สล็อต 3 ช่อง
-        const slot1 = fruits[Math.floor(Math.random() * fruits.length)];
-        const slot2 = fruits[Math.floor(Math.random() * fruits.length)];
-        const slot3 = fruits[Math.floor(Math.random() * fruits.length)];
+        // 🎰 เพิ่มแอนิเมชันแสดงว่ากำลังหมุนสล็อต
+        await interaction.editReply({ content: "🎰 กำลังหมุนสล็อต... 🎵🎶", ephemeral: true });
     
-        let resultMessage = `🎰 | **${slot1} | ${slot2} | ${slot3}** |\n`;
-        
-        if (slot1 === slot2 && slot2 === slot3) {
-            // ชนะ 3 เท่าของเงินเดิมพัน
-            user.wallet += amount * 3;
-            resultMessage += `🎉 แจ็คพอต! คุณชนะ **${amount * 3}** 🪙!`;
-        } else if (slot1 === slot2 || slot2 === slot3 || slot1 === slot3) {
-            // คืนเงินเดิมพัน
-            resultMessage += `😊 คุณได้คืนเงิน **${amount}** 🪙!`;
-        } else {
-            // เสียเงินเดิมพัน
-            user.wallet -= amount;
-            resultMessage += `😢 คุณแพ้และเสีย **${amount}** 🪙!`;
-        }
+        setTimeout(async () => {
+            // 🎰 สุ่มผลลัพธ์สล็อต 3 ช่อง
+            const slot1 = fruits[Math.floor(Math.random() * fruits.length)];
+            const slot2 = fruits[Math.floor(Math.random() * fruits.length)];
+            const slot3 = fruits[Math.floor(Math.random() * fruits.length)];
     
-        await user.save();
-        await interaction.editReply({ content: resultMessage, ephemeral: true });
+            let resultMessage = `🎰 | **${slot1} | ${slot2} | ${slot3}** |\n`;
+    
+            let multiplier = 1;
+            if (slot1 === slot2 && slot2 === slot3) {
+                // ชนะ 5 เท่าถ้าทั้ง 3 ช่องเหมือนกัน
+                multiplier = slot1 === "⭐" ? 10 : 5; // ⭐ โบนัสคูณ 10
+                user.wallet += amount * multiplier;
+                resultMessage += `🎉 แจ็คพอต! คุณชนะ **${amount * multiplier}** 🪙! 🎆✨`;
+            } else if (slot1 === slot2 || slot2 === slot3 || slot1 === slot3) {
+                // คืนเงินเดิมพัน
+                user.wallet += amount;
+                resultMessage += `😊 คุณได้คืนเงิน **${amount}** 🪙! 🎵🎶`;
+            } else {
+                // เสียเงินเดิมพัน
+                user.wallet -= amount;
+                resultMessage += `😢 คุณแพ้และเสีย **${amount}** 🪙! 🎭`;
+            }
+    
+            await user.save();
+            await interaction.editReply({ content: resultMessage, ephemeral: true });
+        }, 3000); // ⏳ ทำให้รอนิดนึงก่อนแสดงผล
     }
+    
         
         
 });
