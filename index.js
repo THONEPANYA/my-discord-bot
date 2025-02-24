@@ -182,6 +182,11 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply({ content: helpMessage, ephemeral: true });
     }
 
+    // ✅ ป้องกันข้อผิดพลาด: ตรวจสอบว่า interaction มาจากเซิร์ฟเวอร์เท่านั้น
+    if (!interaction.guild) {
+        return interaction.reply({ content: "❌ คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์เท่านั้น!", ephemeral: true });
+    }
+
     // ✅ คำสั่ง /setup - ตั้งค่าระบบยืนยันตัวตน
     if (interaction.commandName === 'setup') {
         const subcommand = interaction.options.getSubcommand(false);
@@ -223,20 +228,25 @@ client.on('interactionCreate', async (interaction) => {
         let role = interaction.guild.roles.cache.find(r => r.name === roleName);
         
         if (!role) {
-            role = await interaction.guild.roles.create({
-                name: roleName,
-                color: "BLUE",
-                permissions: []
-            });
+            try {
+                role = await interaction.guild.roles.create({
+                    name: roleName,
+                    color: "BLUE",
+                    permissions: []
+                });
+            } catch (error) {
+                console.error("❌ ไม่สามารถสร้างยศได้:", error);
+                return interaction.reply({ content: "❌ บอทไม่มีสิทธิ์สร้างยศ! โปรดตรวจสอบสิทธิ์ของบอท.", ephemeral: true });
+            }
         }
 
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member) {
-            return await interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
+            return interaction.reply({ content: "❌ ไม่พบข้อมูลของคุณในเซิร์ฟเวอร์!", ephemeral: true });
         }
 
         if (member.roles.cache.has(role.id)) {
-            return await interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
+            return interaction.reply({ content: "✅ คุณมียศ 'สมาชิก' อยู่แล้ว!", ephemeral: true });
         }
 
         await member.roles.add(role).catch(err => {
@@ -282,9 +292,9 @@ client.on('interactionCreate', async (interaction) => {
         const members = `👥 สมาชิก: ${guild.memberCount}`;
         const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
         const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
-    
+
         const stats = { members, textChannels, voiceChannels };
-    
+
         for (const [key, name] of Object.entries(stats)) {
             let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
             if (channel) {
@@ -292,6 +302,7 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
     }
+
 
     // ✅ เช็คยอดเงิน
         if (interaction.commandName === 'balance') {
