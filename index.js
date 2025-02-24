@@ -338,7 +338,11 @@ client.on('interactionCreate', async (interaction) => {
             await user.save();
         
             await interaction.reply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
-        }        
+        }
+        const user = await Economy.findOne({ userId: 'YOUR_DISCORD_USER_ID' });
+        console.log(user);
+        await Economy.updateMany({}, { $set: { lastWork: null } });
+
         
 });
 
