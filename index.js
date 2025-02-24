@@ -250,12 +250,36 @@ client.on('interactionCreate', async (interaction) => {
     
 
     if (interaction.commandName === 'setupstats') {
-        await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
-
+        await interaction.deferReply({ ephemeral: false });
+    
+        const subcommand = interaction.options.getSubcommand(false);
+    
+        if (subcommand === 'remove') {
+            // ค้นหาหมวด "📊 Server Stats"
+            let statsCategory = interaction.guild.channels.cache.find(ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory);
+    
+            if (!statsCategory) {
+                return interaction.editReply({ content: "❌ ไม่พบหมวดหมู่ Server Stats!", ephemeral: true });
+            }
+    
+            // ค้นหาและลบห้องทั้งหมดในหมวดหมู่
+            let statsChannels = interaction.guild.channels.cache.filter(ch => ch.parentId === statsCategory.id);
+            for (let [id, channel] of statsChannels) {
+                await channel.delete();
+            }
+    
+            // ลบหมวดหมู่หลัก
+            await statsCategory.delete();
+            return interaction.editReply({ content: "✅ ห้อง Server Stats ถูกลบเรียบร้อย!", ephemeral: true });
+        }
+    
+        // ✅ ถ้าไม่ได้ใช้ `/setupstats remove` → สร้างห้องสถิติ
+        await interaction.editReply("⏳ กำลังตั้งค่าห้องสถิติ...");
+    
         let statsCategory = interaction.guild.channels.cache.find(
             ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory
         );
-
+    
         if (!statsCategory) {
             statsCategory = await interaction.guild.channels.create({
                 name: "📊 Server Stats",
@@ -263,18 +287,18 @@ client.on('interactionCreate', async (interaction) => {
                 position: 0
             });
         }
-
+    
         const stats = {
             members: `👥 สมาชิก: ${interaction.guild.memberCount}`,
             textChannels: `💬 ข้อความ: ${interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`,
             voiceChannels: `🔊 ห้องเสียง: ${interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`
         };
-
+    
         for (const [key, name] of Object.entries(stats)) {
             let channel = interaction.guild.channels.cache.find(
                 ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice
             );
-
+    
             if (!channel) {
                 channel = await interaction.guild.channels.create({
                     name,
@@ -284,11 +308,12 @@ client.on('interactionCreate', async (interaction) => {
                 });
             }
         }
-
+    
         await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
         updateStats(interaction.guild);
     }
-
+    
+    // ✅ ฟังก์ชันอัปเดตข้อมูลแบบเรียลไทม์
     async function updateStats(guild) {
         const members = `👥 สมาชิก: ${guild.memberCount}`;
         const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
@@ -307,10 +332,11 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
     client.on("guildMemberAdd", async (member) => updateStats(member.guild));
     client.on("guildMemberRemove", async (member) => updateStats(member.guild));
+    
 
 
 
-        // ✅ เช็คยอดเงิน
+    // ✅ เช็คยอดเงิน
         if (interaction.commandName === 'balance') {
             await interaction.deferReply({ ephemeral: true });  // ✅ บอทแจ้งว่าแสดงให้เฉพาะคนใช้คำสั่ง
         
