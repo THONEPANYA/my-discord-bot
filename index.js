@@ -327,7 +327,7 @@ client.on('interactionCreate', async (interaction) => {
 
         // ✅ ดูอันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์
         if (interaction.commandName === 'leaderboard') {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.reply({ content: "⏳ กำลังโหลดข้อมูล...", ephemeral: true });
         
             // ดึงข้อมูลทั้งหมด และเรียงลำดับจากยอดเงินรวม (wallet + bank) มากที่สุด
             const topUsers = await Economy.find().sort({ $expr: { $add: ["$wallet", "$bank"] } }).limit(10);
@@ -342,7 +342,7 @@ client.on('interactionCreate', async (interaction) => {
             });
         
             await interaction.editReply({ content: leaderboardText, ephemeral: true });
-        }
+        }        
         
         
 });
