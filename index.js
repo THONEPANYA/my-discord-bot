@@ -215,14 +215,16 @@ client.on('interactionCreate', async (interaction) => {
     
         // ✅ เช็คยอดเงิน
         if (interaction.commandName === 'balance') {
+            await interaction.deferReply({ ephemeral: true });  // ✅ บอทแจ้งว่ากำลังทำงาน
+            
             let user = await Economy.findOne({ userId: interaction.user.id });
             if (!user) {
                 user = new Economy({ userId: interaction.user.id });
                 await user.save();
             }
-    
-            await interaction.reply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
-        }
+        
+            await interaction.editReply(`💰 **${interaction.user.username}**\n🪙 Wallet: **${user.wallet}**\n🏦 Bank: **${user.bank}**`);
+        }        
     
         // ✅ รับเงินประจำวัน
         if (interaction.commandName === 'daily') {
@@ -314,8 +316,9 @@ client.on('interactionCreate', async (interaction) => {
 
         // ✅ ทำงานเพื่อรับเงิน
         if (interaction.commandName === 'work') {
-            let user = await Economy.findOne({ userId: interaction.user.id });
+            await interaction.deferReply();  // ✅ ป้องกัน "Unknown interaction"
         
+            let user = await Economy.findOne({ userId: interaction.user.id });
             if (!user) {
                 user = new Economy({ userId: interaction.user.id });
             }
@@ -328,7 +331,7 @@ client.on('interactionCreate', async (interaction) => {
                 const minutes = Math.floor(remainingTime / (1000 * 60));
                 const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
         
-                return interaction.reply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`, { flags: 64 });
+                return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
             }
         
             // ✅ สุ่มเงินที่จะได้รับจากการทำงาน
@@ -337,11 +340,8 @@ client.on('interactionCreate', async (interaction) => {
             user.lastWork = now;
             await user.save();
         
-            await interaction.reply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
-        }
-        const user = await Economy.findOne({ userId: 'YOUR_DISCORD_USER_ID' });
-        console.log(user);
-        await Economy.updateMany({}, { $set: { lastWork: null } });
+            await interaction.editReply(`💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
+        }        
 
         
 });
