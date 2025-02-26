@@ -274,52 +274,113 @@ client.on('interactionCreate', async (interaction) => {
 
     // ✅ คำสั่ง /setupstats - ตั้งค่าห้อง Server Stats
     if (interaction.commandName === 'setupstats') {
+        try {
+            await interaction.deferReply(); // ✅ ป้องกัน Timeout
 
-        await interaction.deferReply(); // ป้องกัน Timeout
+            const subcommand = interaction.options.getSubcommand(false);
 
-        const subcommand = interaction.options.getSubcommand(false);
-        
-        if (subcommand === 'remove') {
-            let statsCategory = interaction.guild.channels.cache.find(ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory);
+            if (subcommand === 'remove') {
+                let statsCategory = interaction.guild.channels.cache.find(ch => 
+                    ch.name === "📊 Server Stats" && (ch.type === ChannelType.GuildCategory || ch.type === 4)
+                );
+
+                if (!statsCategory) {
+                    return interaction.editReply({ content: "❌ ไม่พบห้องสถิติ!", ephemeral: true });
+                }
+
+                await statsCategory.delete();
+                return interaction.editReply({ content: "✅ ห้องสถิติถูกลบเรียบร้อย!", ephemeral: true });
+            }
+
+            // ✅ ค้นหาหรือสร้างหมวดหมู่ "📊 Server Stats"
+            let statsCategory = interaction.guild.channels.cache.find(ch => 
+                ch.name === "📊 Server Stats" && (ch.type === ChannelType.GuildCategory || ch.type === 4)
+            );
+
             if (!statsCategory) {
-                return interaction.reply({ content: "❌ ไม่พบห้องสถิติ!", ephemeral: true });
+                statsCategory = await interaction.guild.channels.create({
+                    name: "📊 Server Stats",
+                    type: ChannelType.GuildCategory, // หรือใช้ type: 4 ในเวอร์ชันเก่า
+                    position: 0
+                });
             }
-            await statsCategory.delete();
-            return interaction.reply({ content: "✅ ห้องสถิติถูกลบเรียบร้อย!", ephemeral: true });
-        }
 
-        await interaction.reply("⏳ กำลังตั้งค่าห้องสถิติ...");
-
-        let statsCategory = interaction.guild.channels.cache.find(
-            ch => ch.name === "📊 Server Stats" && ch.type === ChannelType.GuildCategory
-        );
-
-        if (!statsCategory) {
-            statsCategory = await interaction.guild.channels.create({
-                name: "📊 Server Stats",
-                type: ChannelType.GuildCategory,
-                position: 0
+            // ✅ ลบช่องเดิมออกก่อนสร้างใหม่
+            const existingStats = interaction.guild.channels.cache.filter(ch => ch.parentId === statsCategory.id);
+            existingStats.forEach(async (channel) => {
+                await channel.delete();
             });
-        }
 
-        await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
-        updateStats(interaction.guild);
-    }
+            // ✅ สร้างห้อง Voice Channel สำหรับสถิติ
+            const membersChannel = await interaction.guild.channels.create({
+                name: `👥 สมาชิก: ${interaction.guild.memberCount}`,
+                type: ChannelType.GuildVoice,
+                parent: statsCategory.id,
+                permissionOverwrites: [
+                    { id: interaction.guild.id, deny: [PermissionsBitField.Flags.Connect] }
+                ]
+            });
 
-    async function updateStats(guild) {
-        const members = `👥 สมาชิก: ${guild.memberCount}`;
-        const textChannels = `💬 ข้อความ: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size}`;
-        const voiceChannels = `🔊 ห้องเสียง: ${guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size}`;
+            const textChannelCount = interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size;
+            const textChannel = await interaction.guild.channels.create({
+                name: `💬 ข้อความ: ${textChannelCount}`,
+                type: ChannelType.GuildVoice,
+                parent: statsCategory.id,
+                permissionOverwrites: [
+                    { id: interaction.guild.id, deny: [PermissionsBitField.Flags.Connect] }
+                ]
+            });
 
-        const stats = { members, textChannels, voiceChannels };
+            const voiceChannelCount = interaction.guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size;
+            const voiceChannel = await interaction.guild.channels.create({
+                name: `🔊 ห้องเสียง: ${voiceChannelCount}`,
+                type: ChannelType.GuildVoice,
+                parent: statsCategory.id,
+                permissionOverwrites: [
+                    { id: interaction.guild.id, deny: [PermissionsBitField.Flags.Connect] }
+                ]
+            });
 
-        for (const [key, name] of Object.entries(stats)) {
-            let channel = guild.channels.cache.find(ch => ch.name.startsWith(name.split(":")[0]) && ch.type === ChannelType.GuildVoice);
-            if (channel) {
-                await channel.setName(name).catch(console.error);
+            await interaction.editReply("✅ **ตั้งค่าห้อง Server Stats สำเร็จ!**");
+            updateStats(interaction.guild);
+
+        } catch (error) {
+            console.error("❌ เกิดข้อผิดพลาดใน /setupstats:", error);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", ephemeral: true });
             }
         }
     }
+
+    // ✅ ฟังก์ชันอัปเดตห้องสถิติอัตโนมัติ
+    async function updateStats(guild) {
+        try {
+            const statsCategory = guild.channels.cache.find(ch => 
+                ch.name === "📊 Server Stats" && (ch.type === ChannelType.GuildCategory || ch.type === 4)
+            );
+
+            if (!statsCategory) return; // ไม่มีหมวดหมู่ ไม่ต้องทำอะไร
+
+            const membersChannel = guild.channels.cache.find(ch => ch.name.startsWith("👥 สมาชิก") && ch.type === ChannelType.GuildVoice);
+            if (membersChannel) await membersChannel.setName(`👥 สมาชิก: ${guild.memberCount}`).catch(console.error);
+
+            const textChannelCount = guild.channels.cache.filter(ch => ch.type === ChannelType.GuildText).size;
+            const textChannel = guild.channels.cache.find(ch => ch.name.startsWith("💬 ข้อความ") && ch.type === ChannelType.GuildVoice);
+            if (textChannel) await textChannel.setName(`💬 ข้อความ: ${textChannelCount}`).catch(console.error);
+
+            const voiceChannelCount = guild.channels.cache.filter(ch => ch.type === ChannelType.GuildVoice).size;
+            const voiceChannel = guild.channels.cache.find(ch => ch.name.startsWith("🔊 ห้องเสียง") && ch.type === ChannelType.GuildVoice);
+            if (voiceChannel) await voiceChannel.setName(`🔊 ห้องเสียง: ${voiceChannelCount}`).catch(console.error);
+
+        } catch (error) {
+            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตห้องสถิติ:", error);
+        }
+    }
+
+    // ✅ อัปเดตข้อมูลอัตโนมัติเมื่อสมาชิกเข้า/ออก
+    client.on("guildMemberAdd", async (member) => updateStats(member.guild));
+    client.on("guildMemberRemove", async (member) => updateStats(member.guild));
+
 
 
     // ✅ เช็คยอดเงิน
