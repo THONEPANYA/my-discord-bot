@@ -716,8 +716,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
     
-    // blackjack
-        // ✅ blackjack
+    // ✅ blackjack
     if (interaction.commandName === 'blackjack') {
         try {
             await interaction.deferReply();
