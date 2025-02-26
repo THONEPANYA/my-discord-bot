@@ -558,7 +558,7 @@ client.on('interactionCreate', async (interaction) => {
 
     // ✅ Slot Machine Game
     if (interaction.commandName === 'slot') {
-        await interaction.deferReply(); // ✅ ป้องกัน Unknown interaction
+        await interaction.deferReply( {ephemeral: true} ); // ✅ ป้องกัน Unknown interaction
 
         let user = await Economy.findOne({ userId: interaction.user.id });
         const betAmount = interaction.options.getInteger('amount');
