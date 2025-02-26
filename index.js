@@ -780,7 +780,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
 
-    // ✅ blackjack
+    // ✅ คำสั่ง /blackjack
     if (interaction.commandName === 'blackjack') {
         try {
             await interaction.deferReply();
@@ -794,7 +794,7 @@ client.on('interactionCreate', async (interaction) => {
 
             user.wallet -= betAmount; // หักเงินเดิมพันออกก่อนเล่น
 
-            const drawCard = () => Math.floor(Math.random() * 11) + 1; // ไพ่ 1-11 แต้ม
+            const drawCard = () => Math.floor(Math.random() * 11) + 1;
             let playerCards = [drawCard(), drawCard()];
             let botCards = [drawCard(), drawCard()];
 
@@ -837,33 +837,32 @@ client.on('interactionCreate', async (interaction) => {
     client.on('interactionCreate', async (interaction) => {
         if (!interaction.isButton()) return;
 
-        const userId = interaction.customId.split("_")[2]; // ดึง userId จากปุ่ม
-        if (!activeGames.has(userId)) {
-            return interaction.reply({ content: "❌ เกมของคุณหมดอายุ หรือถูกรีเซ็ต! ลองใช้ `/blackjack` ใหม่อีกครั้ง", ephemeral: true });
+        const userId = interaction.customId.split("_")[2]; 
+        if (!userId || interaction.user.id !== userId) {
+            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกมนี้!", ephemeral: true });
         }
 
-        let game = activeGames.get(userId);
+        if (!activeGames.has(interaction.user.id)) {
+            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกม Blackjack!", ephemeral: true });
+        }
+
+        let game = activeGames.get(interaction.user.id);
 
         try {
-            await interaction.deferUpdate(); // ✅ ป้องกัน Interaction Error
-
             if (interaction.customId.startsWith("blackjack_hit")) {
                 let newCard = Math.floor(Math.random() * 11) + 1;
                 game.playerCards.push(newCard);
                 game.playerTotal = game.playerCards.reduce((a, b) => a + b, 0);
 
                 if (game.playerTotal > 21) {
-                    activeGames.delete(userId);
-                    return interaction.editReply({
+                    activeGames.delete(interaction.user.id);
+                    return interaction.update({
                         content: `💥 **คุณแพ้!** (แต้มเกิน 21) ❌\nเสีย **${game.betAmount} 🪙**`,
                         components: []
                     });
                 }
 
-                return interaction.editReply({
-                    content: `🃏 **คุณจั่วได้ ${newCard}!**\nแต้มตอนนี้: **${game.playerTotal} แต้ม**\n\n✅ ใช้ปุ่ม **"จั่วไพ่"** เพื่อจั่วเพิ่ม หรือ **"หยุด"** เพื่อหยุด!`,
-                    components: interaction.message.components
-                });
+                return interaction.deferUpdate(); // ✅ ใช้แทน interaction.update() เพื่อไม่ให้เกิดปัญหาซ้ำซ้อน
             }
 
             if (interaction.customId.startsWith("blackjack_stand")) {
@@ -888,9 +887,9 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
                 await game.user.save();
-                activeGames.delete(userId);
+                activeGames.delete(interaction.user.id);
 
-                return interaction.editReply({
+                return interaction.update({
                     content: `🃏 **Blackjack จบเกม** 🎲  
                     \n👨‍💼 **คุณ:** ${game.playerCards.join(", ")} (**${game.playerTotal} แต้ม**)  
                     🤖 **บอท:** ${game.botCards.join(", ")} (**${game.botTotal} แต้ม**)\n\n` +
@@ -905,6 +904,7 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
     });
+
 
 
 
