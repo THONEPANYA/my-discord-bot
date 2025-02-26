@@ -716,7 +716,9 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
     
-    const activeGames = new Map(); // ✅ ประกาศตัวแปรเก็บข้อมูลเกม Blackjack
+    // ✅ เก็บสถานะเกม
+    // ✅ เก็บสถานะเกม
+    const activeGames = new Map();
 
     // ✅ blackjack
     if (interaction.commandName === 'blackjack') {
@@ -801,6 +803,8 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             if (interaction.customId === "blackjack_stand") {
+                await interaction.deferUpdate(); // ✅ ป้องกัน Interaction Error
+
                 while (game.botTotal < 17) {
                     let newCard = Math.floor(Math.random() * 11) + 1;
                     game.botCards.push(newCard);
@@ -824,7 +828,7 @@ client.on('interactionCreate', async (interaction) => {
                 await game.user.save();
                 activeGames.delete(interaction.user.id);
 
-                return interaction.update({
+                return interaction.editReply({
                     content: `🃏 **Blackjack จบเกม** 🎲  
                     \n👨‍💼 **คุณ:** ${game.playerCards.join(", ")} (**${game.playerTotal} แต้ม**)  
                     🤖 **บอท:** ${game.botCards.join(", ")} (**${game.botTotal} แต้ม**)\n\n` +
@@ -839,6 +843,8 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
     });
+
+
 
     
         
