@@ -783,16 +783,16 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ คำสั่ง /blackjack
     if (interaction.commandName === 'blackjack') {
         try {
-            await interaction.deferReply({ephemeral: true});
+            await interaction.deferReply({ ephemeral: false });
 
             let user = await Economy.findOne({ userId: interaction.user.id });
             const betAmount = interaction.options.getInteger('amount');
 
             if (!user || user.wallet < betAmount || betAmount < 100) {
-                return interaction.editReply("❌ คุณต้องเดิมพันอย่างน้อย **100 🪙** และต้องมีเงินเพียงพอ!");
+                return interaction.editReply({ content: "❌ คุณต้องเดิมพันอย่างน้อย **100 🪙** และต้องมีเงินเพียงพอ!", ephemeral: true });
             }
 
-            user.wallet -= betAmount; // หักเงินเดิมพันออกก่อนเล่น
+            user.wallet -= betAmount;
 
             const drawCard = () => Math.floor(Math.random() * 11) + 1;
             let playerCards = [drawCard(), drawCard()];
@@ -820,7 +820,6 @@ client.on('interactionCreate', async (interaction) => {
 
             await interaction.editReply({ content: gameMessage(), components: [row] });
 
-            // ✅ เก็บสถานะเกมของผู้เล่น
             activeGames.set(interaction.user.id, { 
                 user, betAmount, playerCards, botCards, playerTotal, botTotal 
             });
@@ -862,7 +861,10 @@ client.on('interactionCreate', async (interaction) => {
                     });
                 }
 
-                return interaction.deferUpdate(); // ✅ ใช้แทน interaction.update() เพื่อไม่ให้เกิดปัญหาซ้ำซ้อน
+                return interaction.update({
+                    content: `🃏 **คุณจั่วได้ ${newCard}!**\nแต้มตอนนี้: **${game.playerTotal} แต้ม**\n\n✅ ใช้ปุ่ม **"จั่วไพ่"** เพื่อจั่วเพิ่ม หรือ **"หยุด"** เพื่อหยุด!`,
+                    components: interaction.message.components
+                });
             }
 
             if (interaction.customId.startsWith("blackjack_stand")) {
@@ -904,6 +906,7 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
     });
+
 
 
 
