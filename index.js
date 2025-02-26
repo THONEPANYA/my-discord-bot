@@ -425,7 +425,7 @@ client.on('interactionCreate', async (interaction) => {
         // ✅ ดูอันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์
         if (interaction.commandName === 'leaderboard') {
             try {
-                await interaction.deferReply();  // ✅ ป้องกัน Interaction หมดอายุ
+                await interaction.deferReply( {ephemeral: true} );  // ✅ ป้องกัน Interaction หมดอายุ
         
                 // ดึงข้อมูลผู้ใช้ทั้งหมด
                 const users = await Economy.find().lean(); // ✅ ใช้ `lean()` เพื่อลดเวลาโหลด
