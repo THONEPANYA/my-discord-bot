@@ -8,8 +8,8 @@ import 'dotenv/config';
 import Economy from './models/economy.js';
 import mongoose from 'mongoose';
 
-    // ✅ เก็บสถานะเกม
-    const activeGames = new Map();
+// ✅ เก็บสถานะเกม
+const activeGames = new Map();
 
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
@@ -784,6 +784,8 @@ client.on('interactionCreate', async (interaction) => {
         let game = activeGames.get(userId);
 
         try {
+            await interaction.deferUpdate(); // ✅ ป้องกัน Interaction Error
+
             if (interaction.customId.startsWith("blackjack_hit")) {
                 let newCard = Math.floor(Math.random() * 11) + 1;
                 game.playerCards.push(newCard);
@@ -791,21 +793,19 @@ client.on('interactionCreate', async (interaction) => {
 
                 if (game.playerTotal > 21) {
                     activeGames.delete(userId);
-                    return interaction.update({
+                    return interaction.editReply({
                         content: `💥 **คุณแพ้!** (แต้มเกิน 21) ❌\nเสีย **${game.betAmount} 🪙**`,
                         components: []
                     });
                 }
 
-                return interaction.update({
+                return interaction.editReply({
                     content: `🃏 **คุณจั่วได้ ${newCard}!**\nแต้มตอนนี้: **${game.playerTotal} แต้ม**\n\n✅ ใช้ปุ่ม **"จั่วไพ่"** เพื่อจั่วเพิ่ม หรือ **"หยุด"** เพื่อหยุด!`,
                     components: interaction.message.components
                 });
             }
 
             if (interaction.customId.startsWith("blackjack_stand")) {
-                await interaction.deferUpdate(); // ✅ ป้องกัน Interaction Error
-
                 while (game.botTotal < 17) {
                     let newCard = Math.floor(Math.random() * 11) + 1;
                     game.botCards.push(newCard);
