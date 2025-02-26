@@ -716,6 +716,8 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
     
+    const activeGames = new Map(); // ✅ ประกาศตัวแปรเก็บข้อมูลเกม Blackjack
+
     // ✅ blackjack
     if (interaction.commandName === 'blackjack') {
         try {
@@ -756,7 +758,7 @@ client.on('interactionCreate', async (interaction) => {
 
             await interaction.editReply({ content: gameMessage(), components: [row] });
 
-            // ✅ เก็บสถานะเกม
+            // ✅ เก็บสถานะเกมของผู้เล่น
             activeGames.set(interaction.user.id, { 
                 user, betAmount, playerCards, botCards, playerTotal, botTotal 
             });
