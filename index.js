@@ -84,19 +84,19 @@ const commands = [
         .addUserOption(option => option.setName('user').setDescription('เลือกผู้ใช้').setRequired(true))
         .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงินที่ต้องการตั้ง').setRequired(true)),
     
-    new SlashCommandBuilder()
-        .setName('addmoney')
-        .setDescription('💰 เพิ่มจำนวนเงินให้ผู้ใช้')
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator) // ✅ ให้เฉพาะแอดมินใช้ได้
-        .addUserOption(option => option.setName('user').setDescription('เลือกผู้ใช้').setRequired(true))
-        .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงินที่ต้องการเพิ่ม').setRequired(true)),
+    // new SlashCommandBuilder()
+    //     .setName('addmoney')
+    //     .setDescription('💰 เพิ่มจำนวนเงินให้ผู้ใช้')
+    //     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator) // ✅ ให้เฉพาะแอดมินใช้ได้
+    //     .addUserOption(option => option.setName('user').setDescription('เลือกผู้ใช้').setRequired(true))
+    //     .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงินที่ต้องการเพิ่ม').setRequired(true)),
 
-    new SlashCommandBuilder()
-        .setName('removemoney')
-        .setDescription('💰 หักเงินจากผู้ใช้')
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator) // ✅ ให้เฉพาะแอดมินใช้ได้
-        .addUserOption(option => option.setName('user').setDescription('เลือกผู้ใช้').setRequired(true))
-        .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงินที่ต้องการหัก').setRequired(true)),
+    // new SlashCommandBuilder()
+    //     .setName('removemoney')
+    //     .setDescription('💰 หักเงินจากผู้ใช้')
+    //     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator) // ✅ ให้เฉพาะแอดมินใช้ได้
+    //     .addUserOption(option => option.setName('user').setDescription('เลือกผู้ใช้').setRequired(true))
+    //     .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงินที่ต้องการหัก').setRequired(true)),
 
     new SlashCommandBuilder()
         .setName('gamble')
@@ -450,73 +450,73 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         // ✅ ตั้งค่าจำนวนเงินของผู้ใช้
-        if (interaction.commandName === 'setmoney') {
-            await interaction.deferReply({ ephemeral: true });
+        // if (interaction.commandName === 'setmoney') {
+        //     await interaction.deferReply({ ephemeral: true });
         
-            const targetUser = interaction.options.getUser('user');
-            const amount = interaction.options.getInteger('amount');
+        //     const targetUser = interaction.options.getUser('user');
+        //     const amount = interaction.options.getInteger('amount');
         
-            if (!targetUser) {
-                return interaction.editReply({ content: "❌ ไม่พบผู้ใช้!", ephemeral: true });
-            }
+        //     if (!targetUser) {
+        //         return interaction.editReply({ content: "❌ ไม่พบผู้ใช้!", ephemeral: true });
+        //     }
         
-            let user = await Economy.findOne({ userId: targetUser.id });
-            if (!user) {
-                user = new Economy({ userId: targetUser.id, wallet: 0, bank: 0 });
-            }
+        //     let user = await Economy.findOne({ userId: targetUser.id });
+        //     if (!user) {
+        //         user = new Economy({ userId: targetUser.id, wallet: 0, bank: 0 });
+        //     }
         
-            user.wallet = amount;
-            await user.save();
+        //     user.wallet = amount;
+        //     await user.save();
         
-            await interaction.editReply({ content: `✅ ตั้งค่าเงินของ **${targetUser.username}** เป็น **${amount}** 🪙 แล้ว!`, ephemeral: true });
-        }
+        //     await interaction.editReply({ content: `✅ ตั้งค่าเงินของ **${targetUser.username}** เป็น **${amount}** 🪙 แล้ว!`, ephemeral: true });
+        // }
         
-        if (interaction.commandName === 'addmoney') {
-            await interaction.deferReply({ ephemeral: true });
+        // if (interaction.commandName === 'addmoney') {
+        //     await interaction.deferReply({ ephemeral: true });
         
-            const targetUser = interaction.options.getUser('user');
-            const amount = interaction.options.getInteger('amount');
+        //     const targetUser = interaction.options.getUser('user');
+        //     const amount = interaction.options.getInteger('amount');
         
-            if (!targetUser) {
-                return interaction.editReply({ content: "❌ ไม่พบผู้ใช้!", ephemeral: true });
-            }
+        //     if (!targetUser) {
+        //         return interaction.editReply({ content: "❌ ไม่พบผู้ใช้!", ephemeral: true });
+        //     }
         
-            let user = await Economy.findOne({ userId: targetUser.id });
-            if (!user) {
-                user = new Economy({ userId: targetUser.id, wallet: 0, bank: 0 });
-            }
+        //     let user = await Economy.findOne({ userId: targetUser.id });
+        //     if (!user) {
+        //         user = new Economy({ userId: targetUser.id, wallet: 0, bank: 0 });
+        //     }
         
-            user.wallet += amount;
-            await user.save();
+        //     user.wallet += amount;
+        //     await user.save();
         
-            await interaction.editReply({ content: `✅ เพิ่มเงินให้ **${targetUser.username}** จำนวน **${amount}** 🪙 แล้ว!`, ephemeral: true });
-        }
+        //     await interaction.editReply({ content: `✅ เพิ่มเงินให้ **${targetUser.username}** จำนวน **${amount}** 🪙 แล้ว!`, ephemeral: true });
+        // }
         
     // ✅ หักเงินจากผู้ใช้
-    if (interaction.commandName === 'removemoney') {
-        await interaction.deferReply({ ephemeral: true });
+    // if (interaction.commandName === 'removemoney') {
+    //     await interaction.deferReply({ ephemeral: true });
     
-        const targetUser = interaction.options.getUser('user');
-        const amount = interaction.options.getInteger('amount');
+    //     const targetUser = interaction.options.getUser('user');
+    //     const amount = interaction.options.getInteger('amount');
     
-        if (!targetUser) {
-            return interaction.editReply({ content: "❌ ไม่พบผู้ใช้!", ephemeral: true });
-        }
+    //     if (!targetUser) {
+    //         return interaction.editReply({ content: "❌ ไม่พบผู้ใช้!", ephemeral: true });
+    //     }
     
-        let user = await Economy.findOne({ userId: targetUser.id });
-        if (!user) {
-            return interaction.editReply({ content: "❌ ผู้ใช้นี้ไม่มีบัญชีในระบบ Economy!", ephemeral: true });
-        }
+    //     let user = await Economy.findOne({ userId: targetUser.id });
+    //     if (!user) {
+    //         return interaction.editReply({ content: "❌ ผู้ใช้นี้ไม่มีบัญชีในระบบ Economy!", ephemeral: true });
+    //     }
     
-        if (user.wallet < amount) {
-            return interaction.editReply({ content: "❌ ผู้ใช้นี้มีเงินไม่เพียงพอ!", ephemeral: true });
-        }
+    //     if (user.wallet < amount) {
+    //         return interaction.editReply({ content: "❌ ผู้ใช้นี้มีเงินไม่เพียงพอ!", ephemeral: true });
+    //     }
     
-        user.wallet -= amount;
-        await user.save();
+    //     user.wallet -= amount;
+    //     await user.save();
     
-        await interaction.editReply({ content: `✅ หักเงิน **${amount}** 🪙 จาก **${targetUser.username}** แล้ว!`, ephemeral: true });
-    }
+    //     await interaction.editReply({ content: `✅ หักเงิน **${amount}** 🪙 จาก **${targetUser.username}** แล้ว!`, ephemeral: true });
+    // }
     
     // ✅ เดิมพันเงินของคุณ
     if (interaction.commandName === 'gamble') {
