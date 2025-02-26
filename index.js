@@ -783,7 +783,7 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ คำสั่ง /blackjack
     if (interaction.commandName === 'blackjack') {
         try {
-            await interaction.deferReply();
+            await interaction.deferReply({ephemeral: true});
 
             let user = await Economy.findOne({ userId: interaction.user.id });
             const betAmount = interaction.options.getInteger('amount');
