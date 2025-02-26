@@ -77,12 +77,12 @@ const commands = [
         .setName('leaderboard')
         .setDescription('🏆 ดูอันดับผู้ที่มีเงินมากที่สุดในเซิร์ฟเวอร์'),
     
-    new SlashCommandBuilder()
-        .setName('setmoney')
-        .setDescription('💰 ตั้งค่าจำนวนเงินของผู้ใช้')
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator) // ✅ ให้เฉพาะแอดมินใช้ได้
-        .addUserOption(option => option.setName('user').setDescription('เลือกผู้ใช้').setRequired(true))
-        .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงินที่ต้องการตั้ง').setRequired(true)),
+    // new SlashCommandBuilder()
+    //     .setName('setmoney')
+    //     .setDescription('💰 ตั้งค่าจำนวนเงินของผู้ใช้')
+    //     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator) // ✅ ให้เฉพาะแอดมินใช้ได้
+    //     .addUserOption(option => option.setName('user').setDescription('เลือกผู้ใช้').setRequired(true))
+    //     .addIntegerOption(option => option.setName('amount').setDescription('จำนวนเงินที่ต้องการตั้ง').setRequired(true)),
     
     // new SlashCommandBuilder()
     //     .setName('addmoney')
