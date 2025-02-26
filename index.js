@@ -8,6 +8,9 @@ import 'dotenv/config';
 import Economy from './models/economy.js';
 import mongoose from 'mongoose';
 
+    // ✅ เก็บสถานะเกม
+    const activeGames = new Map();
+
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
 mongoose.connect(process.env.MONGO_URI)
@@ -715,10 +718,6 @@ client.on('interactionCreate', async (interaction) => {
     
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
-    
-    // ✅ เก็บสถานะเกม
-    // ✅ เก็บสถานะเกม
-    const activeGames = new Map();
 
     // ✅ blackjack
     if (interaction.commandName === 'blackjack') {
@@ -749,11 +748,11 @@ client.on('interactionCreate', async (interaction) => {
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
-                    .setCustomId("blackjack_hit")
+                    .setCustomId(`blackjack_hit_${interaction.user.id}`)
                     .setLabel("🎴 จั่วไพ่")
                     .setStyle(ButtonStyle.Primary),
                 new ButtonBuilder()
-                    .setCustomId("blackjack_stand")
+                    .setCustomId(`blackjack_stand_${interaction.user.id}`)
                     .setLabel("🛑 หยุด")
                     .setStyle(ButtonStyle.Danger)
             );
@@ -776,20 +775,22 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ ระบบตอบสนองปุ่ม
     client.on('interactionCreate', async (interaction) => {
         if (!interaction.isButton()) return;
-        if (!activeGames.has(interaction.user.id)) {
-            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกม Blackjack!", ephemeral: true });
+
+        const userId = interaction.customId.split("_")[2]; // ดึง userId จากปุ่ม
+        if (!activeGames.has(userId)) {
+            return interaction.reply({ content: "❌ เกมของคุณหมดอายุ หรือถูกรีเซ็ต! ลองใช้ `/blackjack` ใหม่อีกครั้ง", ephemeral: true });
         }
 
-        let game = activeGames.get(interaction.user.id);
+        let game = activeGames.get(userId);
 
         try {
-            if (interaction.customId === "blackjack_hit") {
+            if (interaction.customId.startsWith("blackjack_hit")) {
                 let newCard = Math.floor(Math.random() * 11) + 1;
                 game.playerCards.push(newCard);
                 game.playerTotal = game.playerCards.reduce((a, b) => a + b, 0);
 
                 if (game.playerTotal > 21) {
-                    activeGames.delete(interaction.user.id);
+                    activeGames.delete(userId);
                     return interaction.update({
                         content: `💥 **คุณแพ้!** (แต้มเกิน 21) ❌\nเสีย **${game.betAmount} 🪙**`,
                         components: []
@@ -802,7 +803,7 @@ client.on('interactionCreate', async (interaction) => {
                 });
             }
 
-            if (interaction.customId === "blackjack_stand") {
+            if (interaction.customId.startsWith("blackjack_stand")) {
                 await interaction.deferUpdate(); // ✅ ป้องกัน Interaction Error
 
                 while (game.botTotal < 17) {
@@ -826,7 +827,7 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
                 await game.user.save();
-                activeGames.delete(interaction.user.id);
+                activeGames.delete(userId);
 
                 return interaction.editReply({
                     content: `🃏 **Blackjack จบเกม** 🎲  
