@@ -115,6 +115,15 @@ const commands = [
             .setDescription('จำนวนเงินที่ต้องการเดิมพัน')
             .setRequired(true)
         ),
+
+    new SlashCommandBuilder()
+        .setName('blackjack')
+        .setDescription('🃏 เล่นเกมแบล็กแจ็กเพื่อเดิมพันเงิน')
+        .addIntegerOption(option => 
+            option.setName('amount')
+            .setDescription('จำนวนเงินเดิมพัน')
+            .setRequired(true)
+        ),
 ];
 
 const statsChannels = {};
@@ -547,9 +556,9 @@ client.on('interactionCreate', async (interaction) => {
         await user.save();
     }
 
-    // ✅ Slot Machine
+    // ✅ Slot Machine Game
     if (interaction.commandName === 'slot') {
-        await interaction.deferReply();  // ✅ ป้องกัน Unknown interaction
+        await interaction.deferReply(); // ✅ ป้องกัน Unknown interaction
 
         let user = await Economy.findOne({ userId: interaction.user.id });
         const betAmount = interaction.options.getInteger('amount');
@@ -558,15 +567,14 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.editReply("❌ คุณต้องเดิมพันอย่างน้อย **100 🪙** และต้องมีเงินเพียงพอ!");
         }
 
-        user.wallet -= betAmount;  // หักเงินเดิมพันออกก่อนหมุน
+        let freeSpins = 1;  // ✅ กำหนดค่าเริ่มต้น Free Spin = 1 (หมุนปกติ)
 
-        const symbols = ["🍒", "🍊", "⭐", "🍉", "🔔", "💎"];
-        let totalWin = 0;
-        let freeSpins = 0;
-        let spinCount = 0;
+        while (freeSpins > 0) {
+            freeSpins--;  // ✅ ใช้ Free Spin แล้วลดค่าลง
+            user.wallet -= betAmount;  // ✅ หักเงินเดิมพัน
 
-        do {
-            spinCount++; // นับจำนวนรอบที่หมุน
+            const symbols = ["🍒", "🍊", "⭐", "🍉", "🔔", "💎"];
+            let slotResult = [];
 
             // 🌀 **กำหนดโอกาสชนะ**
             const odds = {
@@ -592,7 +600,6 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             // 🌀 **สร้างผลลัพธ์ที่เหมาะสมกับโอกาสที่สุ่มได้**
-            let slotResult = [];
             if (winType === "megaJackpot") {
                 slotResult = ["💎", "💎", "💎"];
             } else if (winType === "jackpot") {
@@ -608,11 +615,6 @@ client.on('interactionCreate', async (interaction) => {
                     symbols[Math.floor(Math.random() * symbols.length)],
                     symbols[Math.floor(Math.random() * symbols.length)]
                 ];
-            }
-
-            // 🎯 **แก้บัค: ถ้าได้ 3 ตัวเหมือนกัน → ชนะเสมอ**
-            if (slotResult[0] === slotResult[1] && slotResult[1] === slotResult[2]) {
-                winType = "jackpot";
             }
 
             // 🎯 คำนวณรางวัล (สเกลตามเงินเดิมพัน)
@@ -632,13 +634,15 @@ client.on('interactionCreate', async (interaction) => {
                 message = `😢 คุณแพ้และเสีย ${betAmount} 🪙... (ลองใหม่อีกครั้ง!)`;
             }
 
-            totalWin += winAmount;
+            user.wallet += winAmount;
 
             // 🎟️ **Free Spin Bonus**
             if (freeSpinRoll < odds.freeSpin) {
-                freeSpins++; // ✅ เพิ่มจำนวนฟรีสปิน
+                freeSpins++;  // ✅ เพิ่ม Free Spin ได้ 1 ครั้ง
                 message += `\n🎟️ **คุณได้ Free Spin! หมุนฟรีอีก 1 ครั้ง!**`;
             }
+
+            await user.save();
 
             // 🎰 **อนิเมชันสล็อตหมุน**
             let slotAnimation = [
@@ -653,23 +657,11 @@ client.on('interactionCreate', async (interaction) => {
                 await new Promise(resolve => setTimeout(resolve, 1000)); // ⏳ หน่วงเวลาให้ดูเหมือนหมุนจริงๆ
             }
 
-            // 🎯 **แสดงผลลัพธ์สุดท้ายของรอบนี้**
+            // 🎯 **แสดงผลลัพธ์สุดท้าย**
             await interaction.editReply(`${slotAnimation[slotAnimation.length - 1]}\n${message}`);
-
-            // ถ้ามี Free Spin → หมุนใหม่
-            if (freeSpins > 0) {
-                await new Promise(resolve => setTimeout(resolve, 3000)); // หน่วงเวลา 3 วิ ก่อนหมุนใหม่
-            }
-
-        } while (freeSpins > 0); // ✅ ถ้ามี Free Spin ให้หมุนต่ออัตโนมัติ
-
-        user.wallet += totalWin;
-        await user.save();
-
-        // 🎯 **แจ้งผลรวมทั้งหมด**
-        return interaction.editReply(`🎰 คุณหมุนไปทั้งหมด **${spinCount} รอบ** และได้รับรางวัลรวม **${totalWin} 🪙**!`);
+        }
     }
-    
+        
     
     // ✅ ทำงานเพื่อรับเงิน
     // ✅ ระบบทำงาน /work
@@ -682,12 +674,12 @@ client.on('interactionCreate', async (interaction) => {
         }
     
         const now = new Date();
-        const cooldown = 60 * 60 * 1000; // 1 ชั่วโมง (มิลลิวินาที)
+        const cooldown = 15 * 60 * 1000; // 15 นาที (มิลลิวินาที)
     
         if (user.lastWork && now - user.lastWork < cooldown) {
             const remainingTime = cooldown - (now - user.lastWork);
-            const minutes = Math.floor(remainingTime / (1000 * 60));
-            const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+            const minutes = Math.floor(remainingTime / (1000 * 15));
+            const seconds = Math.floor((remainingTime % (1000 * 15)) / 1000);
     
             return interaction.editReply(`⏳ คุณสามารถทำงานได้อีกครั้งใน **${minutes} นาที ${seconds} วินาที**`);
         }
@@ -714,6 +706,88 @@ client.on('interactionCreate', async (interaction) => {
         await user.save();
     
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
+    }
+
+    // ✅ blackjack
+
+    if (interaction.commandName === 'blackjack') {
+        await interaction.deferReply();
+    
+        let user = await Economy.findOne({ userId: interaction.user.id });
+        const betAmount = interaction.options.getInteger('amount');
+    
+        if (!user || user.wallet < betAmount || betAmount < 100) {
+            return interaction.editReply("❌ คุณต้องเดิมพันอย่างน้อย **100 🪙** และต้องมีเงินเพียงพอ!");
+        }
+    
+        user.wallet -= betAmount;  // หักเงินเดิมพันออกก่อนเล่น
+    
+        const drawCard = () => Math.floor(Math.random() * 11) + 1; // ไพ่ 1-11 แต้ม
+        let playerCards = [drawCard(), drawCard()];
+        let botCards = [drawCard(), drawCard()];
+    
+        let playerTotal = playerCards.reduce((a, b) => a + b, 0);
+        let botTotal = botCards.reduce((a, b) => a + b, 0);
+    
+        const gameMessage = () => 
+            `🃏 **Blackjack** 🎲  
+            \n👨‍💼 **คุณ:** ${playerCards.join(", ")} (**${playerTotal} แต้ม**)  
+            🤖 **บอท:** ${botCards[0]}, ❓ (**? แต้ม**)\n\n` +
+            "**🛑 หยุด หรือ 🎴 จั่วไพ่?**";
+    
+        let gameReply = await interaction.editReply(gameMessage());
+    
+        const filter = i => i.user.id === interaction.user.id;
+        const collector = interaction.channel.createMessageCollector({ filter, time: 60000 });
+    
+        collector.on('collect', async (msg) => {
+            if (msg.content.toLowerCase() === "จั่ว") {
+                playerCards.push(drawCard());
+                playerTotal = playerCards.reduce((a, b) => a + b, 0);
+                
+                if (playerTotal > 21) {
+                    collector.stop("busted");
+                } else {
+                    await interaction.editReply(gameMessage());
+                }
+            } else if (msg.content.toLowerCase() === "หยุด") {
+                collector.stop("stand");
+            }
+        });
+    
+        collector.on('end', async (_, reason) => {
+            if (reason === "busted") {
+                await interaction.editReply(`💥 **คุณแพ้!** (แต้มเกิน 21) ❌\nเสีย **${betAmount} 🪙**`);
+                return;
+            }
+    
+            while (botTotal < 17) {
+                botCards.push(drawCard());
+                botTotal = botCards.reduce((a, b) => a + b, 0);
+            }
+    
+            let resultMessage = "";
+            let winAmount = 0;
+    
+            if (botTotal > 21 || playerTotal > botTotal) {
+                winAmount = betAmount * 2;
+                user.wallet += winAmount;
+                resultMessage = `🏆 **คุณชนะ!** 🎉 ได้รับ **${winAmount} 🪙**`;
+            } else if (playerTotal === botTotal) {
+                user.wallet += betAmount;
+                resultMessage = `🤝 **เสมอ!** เงินเดิมพันถูกคืน`;
+            } else {
+                resultMessage = `😢 **คุณแพ้** และเสีย **${betAmount} 🪙**`;
+            }
+    
+            await user.save();
+            await interaction.editReply(
+                `🃏 **Blackjack จบเกม** 🎲  
+                \n👨‍💼 **คุณ:** ${playerCards.join(", ")} (**${playerTotal} แต้ม**)  
+                🤖 **บอท:** ${botCards.join(", ")} (**${botTotal} แต้ม**)\n\n` +
+                resultMessage
+            );
+        });
     }
     
 
