@@ -8,9 +8,6 @@ import 'dotenv/config';
 import Economy from './models/economy.js';
 import mongoose from 'mongoose';
 
-// ✅ เก็บสถานะเกม
-const activeGames = new Map();
-
 console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
 
 mongoose.connect(process.env.MONGO_URI)
@@ -780,63 +777,12 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
 
-    // ✅ คำสั่ง /blackjack
-    if (interaction.commandName === 'blackjack') {
-        try {
-            await interaction.deferReply();  // ✅ ป้องกัน Unknown Interaction
+        // ✅ เก็บสถานะเกม Blackjack
+    const activeGames = new Map();
 
-            let user = await Economy.findOne({ userId: interaction.user.id });
-            const betAmount = interaction.options.getInteger('amount');
-
-            if (!user || user.wallet < betAmount || betAmount < 100) {
-                return interaction.editReply({ content: "❌ คุณต้องเดิมพันอย่างน้อย **100 🪙** และต้องมีเงินเพียงพอ!", flags: 64 });
-            }
-
-            user.wallet -= betAmount; // ✅ หักเงินก่อนเล่น
-            await user.save();  // ✅ บันทึกก่อนเพื่อป้องกัน Parallel Save Error
-
-            const drawCard = () => Math.floor(Math.random() * 11) + 1;
-            let playerCards = [drawCard(), drawCard()];
-            let botCards = [drawCard(), drawCard()];
-
-            let playerTotal = playerCards.reduce((a, b) => a + b, 0);
-            let botTotal = botCards.reduce((a, b) => a + b, 0);
-
-            const gameMessage = () => 
-                `🃏 **Blackjack เริ่มเกม** 🎲  
-                \n👨‍💼 **คุณ:** ${playerCards.join(", ")} (**${playerTotal} แต้ม**)  
-                🤖 **บอท:** ${botCards[0]}, ❓ (**? แต้ม**)\n\n` +
-                "**🛑 หยุด หรือ 🎴 จั่วไพ่?**";
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`blackjack_hit_${interaction.user.id}`)
-                    .setLabel("🎴 จั่วไพ่")
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId(`blackjack_stand_${interaction.user.id}`)
-                    .setLabel("🛑 หยุด")
-                    .setStyle(ButtonStyle.Danger)
-            );
-
-            await interaction.editReply({ content: gameMessage(), components: [row] });
-
-            activeGames.set(interaction.user.id, { 
-                user, betAmount, playerCards, botCards, playerTotal, botTotal 
-            });
-
-        } catch (error) {
-            console.error("❌ เกิดข้อผิดพลาดใน Blackjack:", error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", flags: 64 });
-            }
-        }
-    }
-
-    // ✅ ระบบตอบสนองปุ่ม
-    client.on('interactionCreate', async (interaction) => {
+    client.on("interactionCreate", async (interaction) => {
         if (!interaction.isButton()) return;
-
+        
         const userId = interaction.customId.split("_")[2]; 
         if (!userId || interaction.user.id !== userId) {
             return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกมนี้!", flags: 64 });
@@ -889,7 +835,7 @@ client.on('interactionCreate', async (interaction) => {
                     resultMessage = `😢 **คุณแพ้** และเสีย **${game.betAmount} 🪙**`;
                 }
 
-                await game.user.save();  // ✅ ป้องกัน Parallel Save Error
+                await game.user.save();  
                 activeGames.delete(interaction.user.id);
 
                 return interaction.update({
@@ -907,6 +853,7 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
     });
+
 
 
 
