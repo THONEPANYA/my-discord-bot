@@ -783,16 +783,17 @@ client.on('interactionCreate', async (interaction) => {
     // ✅ คำสั่ง /blackjack
     if (interaction.commandName === 'blackjack') {
         try {
-            await interaction.deferReply({ ephemeral: false });
+            await interaction.deferReply();  // ✅ ป้องกัน Unknown Interaction
 
             let user = await Economy.findOne({ userId: interaction.user.id });
             const betAmount = interaction.options.getInteger('amount');
 
             if (!user || user.wallet < betAmount || betAmount < 100) {
-                return interaction.editReply({ content: "❌ คุณต้องเดิมพันอย่างน้อย **100 🪙** และต้องมีเงินเพียงพอ!", ephemeral: true });
+                return interaction.editReply({ content: "❌ คุณต้องเดิมพันอย่างน้อย **100 🪙** และต้องมีเงินเพียงพอ!", flags: 64 });
             }
 
-            user.wallet -= betAmount;
+            user.wallet -= betAmount; // ✅ หักเงินก่อนเล่น
+            await user.save();  // ✅ บันทึกก่อนเพื่อป้องกัน Parallel Save Error
 
             const drawCard = () => Math.floor(Math.random() * 11) + 1;
             let playerCards = [drawCard(), drawCard()];
@@ -827,7 +828,7 @@ client.on('interactionCreate', async (interaction) => {
         } catch (error) {
             console.error("❌ เกิดข้อผิดพลาดใน Blackjack:", error);
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", ephemeral: true });
+                await interaction.reply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", flags: 64 });
             }
         }
     }
@@ -838,11 +839,11 @@ client.on('interactionCreate', async (interaction) => {
 
         const userId = interaction.customId.split("_")[2]; 
         if (!userId || interaction.user.id !== userId) {
-            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกมนี้!", ephemeral: true });
+            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกมนี้!", flags: 64 });
         }
 
         if (!activeGames.has(interaction.user.id)) {
-            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกม Blackjack!", ephemeral: true });
+            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกม Blackjack!", flags: 64 });
         }
 
         let game = activeGames.get(interaction.user.id);
@@ -888,7 +889,7 @@ client.on('interactionCreate', async (interaction) => {
                     resultMessage = `😢 **คุณแพ้** และเสีย **${game.betAmount} 🪙**`;
                 }
 
-                await game.user.save();
+                await game.user.save();  // ✅ ป้องกัน Parallel Save Error
                 activeGames.delete(interaction.user.id);
 
                 return interaction.update({
@@ -902,10 +903,11 @@ client.on('interactionCreate', async (interaction) => {
         } catch (error) {
             console.error("❌ เกิดข้อผิดพลาดระหว่างเล่น Blackjack:", error);
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", ephemeral: true });
+                await interaction.reply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", flags: 64 });
             }
         }
     });
+
 
 
 
