@@ -777,17 +777,23 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
 
-        // ✅ เก็บสถานะเกม Blackjack
+    // ✅ สร้างตัวแปรป้องกันการ save ซ้ำ
+    if (game.isSaving) return;
+    game.isSaving = true; 
+
+    await game.user.save().catch(console.error);
+    game.isSaving = false;
+
+    if (interaction.deferred || interaction.replied) {
+        return;
+    }
+    await interaction.update({ content: "🎯 เกมดำเนินต่อไป!", components: interaction.message.components });
+
+    // ✅ เก็บสถานะเกม
     const activeGames = new Map();
 
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.isButton()) return;
-        
-        const userId = interaction.customId.split("_")[2]; 
-        if (!userId || interaction.user.id !== userId) {
-            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกมนี้!", flags: 64 });
-        }
-
         if (!activeGames.has(interaction.user.id)) {
             return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกม Blackjack!", flags: 64 });
         }
@@ -795,13 +801,22 @@ client.on('interactionCreate', async (interaction) => {
         let game = activeGames.get(interaction.user.id);
 
         try {
-            if (interaction.customId.startsWith("blackjack_hit")) {
+            if (interaction.customId === "blackjack_hit") {
                 let newCard = Math.floor(Math.random() * 11) + 1;
                 game.playerCards.push(newCard);
                 game.playerTotal = game.playerCards.reduce((a, b) => a + b, 0);
 
                 if (game.playerTotal > 21) {
                     activeGames.delete(interaction.user.id);
+                    game.user.wallet -= game.betAmount;
+
+                    // ✅ ป้องกัน `ParallelSaveError`
+                    if (!game.isSaving) {
+                        game.isSaving = true;
+                        await game.user.save().catch(console.error);
+                        game.isSaving = false;
+                    }
+
                     return interaction.update({
                         content: `💥 **คุณแพ้!** (แต้มเกิน 21) ❌\nเสีย **${game.betAmount} 🪙**`,
                         components: []
@@ -814,7 +829,7 @@ client.on('interactionCreate', async (interaction) => {
                 });
             }
 
-            if (interaction.customId.startsWith("blackjack_stand")) {
+            if (interaction.customId === "blackjack_stand") {
                 while (game.botTotal < 17) {
                     let newCard = Math.floor(Math.random() * 11) + 1;
                     game.botCards.push(newCard);
@@ -835,8 +850,14 @@ client.on('interactionCreate', async (interaction) => {
                     resultMessage = `😢 **คุณแพ้** และเสีย **${game.betAmount} 🪙**`;
                 }
 
-                await game.user.save();  
                 activeGames.delete(interaction.user.id);
+
+                // ✅ ป้องกัน `ParallelSaveError`
+                if (!game.isSaving) {
+                    game.isSaving = true;
+                    await game.user.save().catch(console.error);
+                    game.isSaving = false;
+                }
 
                 return interaction.update({
                     content: `🃏 **Blackjack จบเกม** 🎲  
@@ -853,6 +874,8 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
     });
+
+
 
 
 
