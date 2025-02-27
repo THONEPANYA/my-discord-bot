@@ -777,17 +777,18 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
 
-    // ✅ สร้างตัวแปรป้องกันการ save ซ้ำ
-    if (game.isSaving) return;
-    game.isSaving = true; 
 
-    await game.user.save().catch(console.error);
-    game.isSaving = false;
 
-    if (interaction.deferred || interaction.replied) {
-        return;
-    }
-    await interaction.update({ content: "🎯 เกมดำเนินต่อไป!", components: interaction.message.components });
+
+
+
+
+
+
+    
+        
+        
+});
 
     // ✅ เก็บสถานะเกม
     const activeGames = new Map();
@@ -795,7 +796,7 @@ client.on('interactionCreate', async (interaction) => {
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.isButton()) return;
         if (!activeGames.has(interaction.user.id)) {
-            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกม Blackjack!", flags: 64 });
+            return interaction.reply({ content: "❌ คุณไม่ได้อยู่ในเกม Blackjack!", ephemeral: true });
         }
 
         let game = activeGames.get(interaction.user.id);
@@ -870,22 +871,9 @@ client.on('interactionCreate', async (interaction) => {
         } catch (error) {
             console.error("❌ เกิดข้อผิดพลาดระหว่างเล่น Blackjack:", error);
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", flags: 64 });
+                await interaction.reply({ content: "❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง!", ephemeral: true });
             }
         }
     });
-
-
-
-
-
-
-
-
-
-    
-        
-        
-});
 
 client.login(process.env.TOKEN);
