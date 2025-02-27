@@ -780,7 +780,6 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
 
-    // blackjack
     // ✅ ระบบเกม Blackjack
     if (interaction.commandName === 'blackjack') {
         try {
