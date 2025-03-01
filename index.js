@@ -45,6 +45,25 @@ app.get("/api/bot", async (req, res) => {
     res.json({ wallet: 1000 });
 });
 
+app.post("/api/bot/start-blackjack", async (req, res) => {
+    const { userId, betAmount } = req.body;
+
+    if (!userId || betAmount <= 0) {
+        return res.status(400).json({ error: "ข้อมูลไม่ถูกต้อง!" });
+    }
+
+    let user = await Economy.findOne({ userId });
+
+    if (!user || user.wallet < betAmount) {
+        return res.status(400).json({ error: "เงินไม่พอเดิมพัน!" });
+    }
+
+    user.wallet -= betAmount;
+    await user.save();
+
+    return res.json({ message: "เริ่มเกม Blackjack!", newWallet: user.wallet });
+});
+
 app.listen(PORT, () => console.log(`✅ API บอททำงานที่ http://localhost:${PORT}`));
 
 // ลงทะเบียน Slash Commands
@@ -137,11 +156,6 @@ const commands = [
     new SlashCommandBuilder()
         .setName('blackjack')
         .setDescription('🃏 เล่นเกมแบล็กแจ็กเพื่อเดิมพันเงิน')
-        .addIntegerOption(option => 
-            option.setName('amount')
-            .setDescription('จำนวนเงินเดิมพัน')
-            .setRequired(true)
-        ),
 ];
 
 const statsChannels = {};
