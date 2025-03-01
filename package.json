@@ -4,6 +4,7 @@
   "description": "A Discord bot",
   "type": "module",
   "main": "index.js",
+  "types": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -21,5 +22,8 @@
     "mongoose": "^8.10.1",
     "sqlite3": "^5.1.6",
     "ytdl-core": "^4.11.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0"
   }
 }

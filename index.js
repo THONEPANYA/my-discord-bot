@@ -32,6 +32,21 @@ const client = new Client({
 // ✅ เก็บสถานะเกม
 const activeGames = new Map();
 
+// CONNECT API
+const express = require("express");
+
+const app = express();
+const PORT = 4000;
+
+app.use(express.json());
+
+app.get("/api/bot", async (req, res) => {
+    // ตัวอย่างข้อมูลที่ส่งกลับไปยังเว็บ
+    res.json({ wallet: 1000 });
+});
+
+app.listen(PORT, () => console.log(`✅ API บอททำงานที่ http://localhost:${PORT}`));
+
 // ลงทะเบียน Slash Commands
 const commands = [
     new SlashCommandBuilder()
