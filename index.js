@@ -153,9 +153,9 @@ const commands = [
             .setRequired(true)
         ),
 
-    new SlashCommandBuilder()
-        .setName('blackjack')
-        .setDescription('🃏 เล่นเกมแบล็กแจ็กเพื่อเดิมพันเงิน')
+    // new SlashCommandBuilder()
+    //     .setName('blackjack')
+    //     .setDescription('🃏 เล่นเกมแบล็กแจ็กเพื่อเดิมพันเงิน')
 ];
 
 const statsChannels = {};
@@ -651,7 +651,7 @@ client.on('interactionCreate', async (interaction) => {
 
     if (interaction.commandName === 'slot') {
         try {
-            await interaction.deferReply({ ephemeral: false });  // ✅ ป้องกัน Unknown interaction
+            await interaction.deferReply({ ephemeral: true });  // ✅ ป้องกัน Unknown interaction
     
             let user = await Economy.findOne({ userId: interaction.user.id });
             const betAmount = interaction.options.getInteger('amount');
@@ -673,10 +673,10 @@ client.on('interactionCreate', async (interaction) => {
                 // 🌀 **กำหนดโอกาสชนะ**
                 const odds = {
                     megaJackpot: 0.01,  // 🔥 Mega Jackpot (1%) → ได้ 50 เท่า
-                    jackpot: 0.05,      // 🎰 แจ็คพอตปกติ (5%) → ได้ 10 เท่า
-                    twoMatch: 0.35,     // 🎖️ ได้ 2 ตัวเหมือนกัน (35%) → ได้ 2 เท่า
-                    freeSpin: 0.10,     // 🎟️ Free Spin (10%) → ได้หมุนฟรี
-                    lose: 0.60          // 😢 แพ้ (60%) → เสียเงินเดิมพัน
+                    jackpot: 0.03,      // 🎰 แจ็คพอตปกติ (5%) → ได้ 10 เท่า
+                    twoMatch: 0.25,     // 🎖️ ได้ 2 ตัวเหมือนกัน (35%) → ได้ 2 เท่า
+                    freeSpin: 0.20,     // 🎟️ Free Spin (10%) → ได้หมุนฟรี
+                    lose: 0.80          // 😢 แพ้ (60%) → เสียเงินเดิมพัน
                 };
     
                 let winType = "lose";
@@ -808,17 +808,6 @@ client.on('interactionCreate', async (interaction) => {
     
         await interaction.editReply(`${bonusText}💼 **${interaction.user.username}** ทำงานและได้รับ **${earnings}** 🪙!`);
     }
-
-    client.on("interactionCreate", async (interaction) => {
-        if (!interaction.isCommand()) return;
-    
-        if (interaction.commandName === "blackjack") {
-            await interaction.reply({
-                content: "🎲 **เริ่มเล่น Blackjack ได้ที่นี่!**\n🔗 [กดที่นี่เพื่อเล่น](http://localhost:3000/)",
-                ephemeral: true
-            });
-        }
-    });
 
 });
 
