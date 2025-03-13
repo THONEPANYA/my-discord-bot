@@ -676,7 +676,7 @@ client.on('interactionCreate', async (interaction) => {
                     jackpot: 0.03,      // 🎰 แจ็คพอตปกติ (5%) → ได้ 10 เท่า
                     twoMatch: 0.25,     // 🎖️ ได้ 2 ตัวเหมือนกัน (35%) → ได้ 2 เท่า
                     freeSpin: 0.20,     // 🎟️ Free Spin (10%) → ได้หมุนฟรี
-                    lose: 0.80          // 😢 แพ้ (60%) → เสียเงินเดิมพัน
+                    lose: 0.60          // 😢 แพ้ (60%) → เสียเงินเดิมพัน
                 };
     
                 let winType = "lose";
